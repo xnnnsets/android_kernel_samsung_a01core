@@ -1598,6 +1598,15 @@ static void mmc_card_error_logging(struct mmc_card *card, struct mmc_blk_request
 	 *   GE, ECC : Every 1000 errors
 	 *   WP, OOR : Every  100 errors
 	 */
+	if (noti && card->type == MMC_TYPE_SD && card->host->sdcard_uevent) {
+		ret = card->host->sdcard_uevent(card);
+		if (ret)
+			pr_err("%s: Failed to Send Uevent with err %d\n",
+					mmc_hostname(card->host), ret);
+		else
+			card->err_log[0].noti_cnt++;
+	}
+
 	if (brq->sbc.error)
 		mmc_error_count_log(card, index, brq->sbc.error, status);
 	if (brq->cmd.error) {

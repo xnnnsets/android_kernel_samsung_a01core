@@ -2390,6 +2390,17 @@ P_SW_RFB_T qmHandleRxPackets(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSwRfbList
 			}
 		}
 #endif
+
+#if CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION
+		if (qmDetectRxInvalidEAPOL(prAdapter, prCurrSwRfb)) {
+			prCurrSwRfb->eDst = RX_PKT_DESTINATION_NULL;
+			QUEUE_INSERT_TAIL(&rReturnedQue, (P_QUE_ENTRY_T) prCurrSwRfb);
+			DBGLOG(QM, INFO,
+				"drop EAPOL packet not in sec mode\n");
+			continue;
+		}
+#endif
+
 		/* BAR frame */
 		if (HIF_RX_HDR_GET_BAR_FLAG(prHifRxHdr)) {
 			prCurrSwRfb->eDst = RX_PKT_DESTINATION_NULL;
@@ -2452,6 +2463,65 @@ P_SW_RFB_T qmHandleRxPackets(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSwRfbList
 #endif
 
 }
+
+#if CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION
+/*----------------------------------------------------------------------------*/
+/*!
+ * \brief qmDetectRxInvalidEAPOL() is used for fake EAPOL checking.
+ *
+ * \param[in] prSwRfb        The RFB which is being processed.
+ *
+ * \return TRUE when we need to drop it
+ */
+/*----------------------------------------------------------------------------*/
+u_int8_t qmDetectRxInvalidEAPOL(IN P_ADAPTER_T prAdapter,
+	IN P_SW_RFB_T prSwRfb)
+{
+	uint8_t *pucPkt = NULL, *pucEthDestAddr = NULL;
+	P_BSS_INFO_T prBssInfo;
+	uint16_t u2EtherType = 0;
+	u_int8_t fgDrop = FALSE;
+	P_STA_RECORD_T prStaRec = NULL;
+
+	if (prSwRfb->u2PacketLen <= ETHER_HEADER_LEN)
+		return FALSE;
+
+	pucPkt = prSwRfb->pvHeader;
+	if (!pucPkt)
+		return FALSE;
+
+	prStaRec = cnmGetStaRecByIndex(prAdapter, prSwRfb->ucStaRecIdx);
+	prBssInfo = &prAdapter->rWifiVar.arBssInfo[prStaRec->ucNetTypeIndex];
+
+	/* return FALSE if OP_MODE is not SAP */
+	if (!IS_BSS_ACTIVE(prBssInfo)
+		|| prBssInfo->eCurrentOPMode != OP_MODE_ACCESS_POINT)
+		return FALSE;
+
+	pucEthDestAddr = pucPkt;
+	u2EtherType = (pucPkt[ETH_TYPE_LEN_OFFSET] << 8)
+			| (pucPkt[ETH_TYPE_LEN_OFFSET + 1]);
+
+	/* return FALSE if EtherType is not EAPOL */
+	if (u2EtherType != ETH_P_1X)
+		return FALSE;
+
+	if (prSwRfb->eDst == RX_PKT_DESTINATION_HOST_WITH_FORWARD
+		|| prSwRfb->eDst == RX_PKT_DESTINATION_FORWARD) {
+		/* fgIsTxKeyReady is set by nicEventAddPkeyDone */
+		if (prStaRec->fgIsTxKeyReady != TRUE) {
+			fgDrop = TRUE;
+		}
+	}
+
+	DBGLOG(QM, TRACE,
+		"QM: eDst:%d TxKeyReady:%d fgDrop:%d\n",
+		prSwRfb->eDst, prStaRec->fgIsTxKeyReady,
+		fgDrop);
+
+	return fgDrop;
+}
+#endif /* CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION */
 
 /*----------------------------------------------------------------------------*/
 /*!

@@ -5248,6 +5248,42 @@ out:
 	return len;
 }
 
+static ssize_t sd_health_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct mmc_host *mmc = dev_get_drvdata(dev);
+	struct mmc_card *card = mmc->card;
+	struct mmc_card_error_log *err_log;
+	u64 total_c_cnt = 0;
+	u64 total_t_cnt = 0;
+	int len = 0;
+	int i = 0;
+
+	if (!card) {
+		//There should be no spaces in 'No Card'(Vold Team).
+		len = snprintf(buf, PAGE_SIZE, "NOCARD\n");
+		goto out;
+	}
+
+	err_log = card->err_log;
+
+	for (i = 0; i < 6; i++) {
+		if (err_log[i].err_type == -EILSEQ && total_c_cnt < MAX_CNT_U64)
+			total_c_cnt += err_log[i].count;
+		if (err_log[i].err_type == -ETIMEDOUT && total_t_cnt < MAX_CNT_U64)
+			total_t_cnt += err_log[i].count;
+	}
+
+	if(err_log[0].ge_cnt > 100 || err_log[0].ecc_cnt > 0 || err_log[0].wp_cnt > 0 ||
+			err_log[0].oor_cnt > 10 || total_t_cnt > 100 || total_c_cnt > 100)
+		len = snprintf(buf, PAGE_SIZE, "BAD\n");
+	else
+		len = snprintf(buf, PAGE_SIZE, "GOOD\n");
+
+out:
+	return len;
+}
+
 /* SYSFS for service center support */
 static ssize_t sd_count_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -5560,6 +5596,7 @@ static DEVICE_ATTR(hwrst, S_IRUGO, mmccard_hwrst_show, NULL);
 static DEVICE_ATTR(status, S_IRUGO, sdcard_status_show, NULL);
 static DEVICE_ATTR(cd_cnt, S_IRUGO, sdcard_detect_cnt_show, NULL);
 static DEVICE_ATTR(data, 0444, sd_cid_show, NULL);
+static DEVICE_ATTR(fc, 0444, sd_health_show, NULL);
 static DEVICE_ATTR(sdcard_summary, S_IRUGO, sdcard_summary_show, NULL);
 static DEVICE_ATTR(mmc_summary, S_IRUGO, mmc_summary_show, NULL);
 static DEVICE_ATTR(max_mode, S_IRUGO, sdcard_detect_maxmode_show, NULL);
@@ -5579,6 +5616,43 @@ static struct attribute *sdcard_attributes[] = {
 
 static struct attribute_group sdcard_attr_group = {
 	.attrs = sdcard_attributes,
+};
+
+/* Callback function for SD Card IO Error */
+static int sdcard_uevent(struct mmc_card *card)
+{
+	pr_info("%s: Send Notification about SD Card IO Error\n", mmc_hostname(card->host));
+	return kobject_uevent(&sdcard_dev->kobj, KOBJ_CHANGE);
+}
+
+static int sdhci_sdcard_uevent(struct device *dev, struct kobj_uevent_env *env)
+{
+	struct mmc_host *mmc = dev_get_drvdata(dev);
+	struct mmc_card *card = NULL;
+	int retval = 0;
+	bool card_exist = false;
+
+	add_uevent_var(env, "DEVNAME=%s", dev->kobj.name);
+
+	if (mmc->card) {
+		card_exist = true;
+		card = mmc->card;
+	} else
+		card_exist = false;
+
+	/* Disable this feature for MASS Project. It's possible to enable after review */
+	retval = add_uevent_var(env, "IOERROR=%s", card_exist ? (
+				((card->err_log[0].ge_cnt && !(card->err_log[0].ge_cnt % 1000)) ||
+				 (card->err_log[0].ecc_cnt && !(card->err_log[0].ecc_cnt % 1000)) ||
+				 (card->err_log[0].wp_cnt && !(card->err_log[0].wp_cnt % 100)) ||
+				 (card->err_log[0].oor_cnt && !(card->err_log[0].oor_cnt % 100)))
+				? "YES" : "NO") : "NoCard");
+
+	return retval;
+}
+
+static struct device_type sdcard_type = {
+	.uevent = sdhci_sdcard_uevent,
 };
 
 static int msdc_drv_probe(struct platform_device *pdev)
@@ -5847,6 +5921,9 @@ static int msdc_drv_probe(struct platform_device *pdev)
 		if (IS_ERR(sdcard_dev))
 			pr_err("%s:Failed to create device\n", __func__);
 
+		sdcard_dev->type = &sdcard_type;
+		mmc->sdcard_uevent = sdcard_uevent;
+
 		retval = sysfs_create_group(&sdcard_dev->kobj, &sdcard_attr_group);
 		if (retval) {
 			pr_err("%s:Failed to create sdcard sysfs group\n", __func__);
@@ -5858,6 +5935,10 @@ static int msdc_drv_probe(struct platform_device *pdev)
 		sd_info_dev = sec_device_create(NULL, "sdinfo");
 		if (IS_ERR(sd_info_dev))
 			pr_err("%s : Failed to create device!\n", __func__);
+
+		if (device_create_file(sd_info_dev, &dev_attr_fc) < 0)
+			pr_err("%s : Failed to create device file(%s)!\n",
+					__func__, dev_attr_fc.attr.name);
 
 		if (device_create_file(sd_info_dev, &dev_attr_data) < 0)
 			pr_err("%s : Failed to create device file(%s)!\n",

@@ -875,6 +875,11 @@ UINT_32 qmGetRxReorderQueuedBufferCount(IN P_ADAPTER_T prAdapter);
 VOID qmHandleReorderBubbleTimeout(IN P_ADAPTER_T prAdapter, IN ULONG ulParamPtr);
 VOID qmHandleEventCheckReorderBubble(IN P_ADAPTER_T prAdapter, IN P_WIFI_EVENT_T prEvent);
 VOID qmHandleMissTimeout(IN P_RX_BA_ENTRY_T prReorderQueParm);
+#if CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION
+u_int8_t qmDetectRxInvalidEAPOL(IN P_ADAPTER_T prAdapter,
+	IN P_SW_RFB_T prSwRfb);
+
+#endif /* CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION */
 
 #if ARP_MONITER_ENABLE
 VOID qmDetectArpNoResponse(P_ADAPTER_T prAdapter, P_MSDU_INFO_T prMsduInfo);

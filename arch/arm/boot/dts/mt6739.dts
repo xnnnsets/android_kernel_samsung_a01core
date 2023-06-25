@@ -336,6 +336,7 @@
 				<GIC_PPI 11 IRQ_TYPE_LEVEL_LOW>,
 				<GIC_PPI 10 IRQ_TYPE_LEVEL_LOW>;
 		clock-frequency = <13000000>;
+                arm,no-tick-in-suspend;
 	};
 
 	clk26m: clk26m {

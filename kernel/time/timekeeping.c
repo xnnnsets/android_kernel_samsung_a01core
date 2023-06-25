@@ -1668,9 +1668,11 @@ void timekeeping_resume(void)
 		nsec = mul_u64_u32_shr(cyc_delta, clock->mult, clock->shift);
 		ts_delta = ns_to_timespec64(nsec);
 		sleeptime_injected = true;
+//                pr_warn("Persistent clock CLOCK_SOURCE_SUSPEND_NONSTOP");
 	} else if (timespec64_compare(&ts_new, &timekeeping_suspend_time) > 0) {
 		ts_delta = timespec64_sub(ts_new, timekeeping_suspend_time);
 		sleeptime_injected = true;
+//                pr_warn("Persistent clock CLOCK_SOURCE_SUSPEND_NONSTOP no tick");
 	}
 
 	if (sleeptime_injected)

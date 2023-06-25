@@ -617,6 +617,7 @@ struct mmc_host {
 #endif
 
 	unsigned int            card_detect_cnt;
+	int (*sdcard_uevent)(struct mmc_card *card);
 	unsigned long		private[0] ____cacheline_aligned;
 };
 

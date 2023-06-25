@@ -78,13 +78,17 @@ out:
 	tcm_hcd->tsp_dump_lock = false;
 }
 
-static int sec_fn_load_fw(struct syna_tcm_hcd *tcm_hcd, const char *file_path)
+extern int long spu_firmware_signature_verify(const char* fw_name, const u8* fw_data, const long fw_size);
+
+static int sec_fn_load_fw(struct syna_tcm_hcd *tcm_hcd, bool signing, const char *file_path)
 {
 	struct file *fp;
 	mm_segment_t old_fs;
 	int fw_size, nread;
 	int error = 0;
 	unsigned char *fw_data;
+	size_t spu_fw_size;
+	size_t spu_ret = 0;
 
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
@@ -93,34 +97,77 @@ static int sec_fn_load_fw(struct syna_tcm_hcd *tcm_hcd, const char *file_path)
 	if (IS_ERR(fp)) {
 		input_err(true, tcm_hcd->pdev->dev.parent,
 			"%s: failed to open %s\n", __func__,file_path);
-		error = -ENOENT;
-		goto open_err;
+		set_fs(old_fs);
+		return error;
 	}
 
 	fw_size = fp->f_path.dentry->d_inode->i_size;
+
+	if (signing) {
+		/* name 3, digest 32, signature 512 */
+		spu_fw_size = fw_size;
+		fw_size -= SPU_METADATA_SIZE(TSP);
+	}
 
 	if (fw_size > 0) {
 		fw_data = vzalloc(fw_size);
 		if (!fw_data) {
 			input_err(true, tcm_hcd->pdev->dev.parent, "%s: failed to alloc mem\n", __func__);
 			error = -ENOMEM;
-			filp_close(fp, NULL);
 			goto open_err;
 		}
-		nread = vfs_read(fp, (char __user *)fw_data,
-			fw_size, &fp->f_pos);
 
-		input_info(true, tcm_hcd->pdev->dev.parent,
-			"%s: start, file path %s, size %ld Bytes\n", __func__, file_path, fw_size);
+		if (signing) {
+			unsigned char *spu_fw_data;
 
-		if (nread != fw_size) {
-			input_err(true, tcm_hcd->pdev->dev.parent,
-				"%s: failed to read firmware file, nread %u Bytes\n",
-				__func__, nread);
-			error = -EIO;
-			vfree(fw_data);
-			filp_close(fp, current->files);
-			goto open_err;
+			spu_fw_data = vzalloc(spu_fw_size);
+			if (!spu_fw_data) {
+				input_err(true, tcm_hcd->pdev->dev.parent, "%s: failed to alloc mem for spu\n", __func__);
+				error = -ENOMEM;
+				vfree(fw_data);
+				goto open_err;
+			}			
+			nread = vfs_read(fp, (char __user *)spu_fw_data, spu_fw_size, &fp->f_pos);
+
+			input_info(true, tcm_hcd->pdev->dev.parent,
+				"%s: start, file path %s, size %ld Bytes\n", __func__, file_path, spu_fw_size);
+
+			if (nread != spu_fw_size) {
+				input_err(true, tcm_hcd->pdev->dev.parent,
+					"%s: failed to read firmware file, nread %u Bytes\n",
+					__func__, nread);
+				error = -EIO;
+				vfree(fw_data);
+				vfree(spu_fw_data);
+				goto open_err;
+			}
+			spu_ret = spu_firmware_signature_verify("TSP", spu_fw_data, spu_fw_size);
+			if (spu_ret != fw_size) {
+				input_err(true, tcm_hcd->pdev->dev.parent, "%s: signature verify failed, %zu\n",
+						__func__, spu_ret);
+				error = -EINVAL;
+				vfree(spu_fw_data);
+				vfree(fw_data);
+				goto open_err;
+			}
+
+			memcpy(fw_data, spu_fw_data, fw_size);
+			vfree(spu_fw_data);
+		} else {
+			nread = vfs_read(fp, (char __user *)fw_data,
+				fw_size, &fp->f_pos);
+
+			input_info(true, tcm_hcd->pdev->dev.parent,
+				"%s: start, file path %s, size %ld Bytes\n", __func__, file_path, fw_size);
+
+			if (nread != fw_size) {
+				input_err(true, tcm_hcd->pdev->dev.parent,
+					"%s: failed to read firmware file, nread %u Bytes\n",
+					__func__, nread);
+				error = -EIO;
+				vfree(fw_data);
+				goto open_err;
+			}
 		}
 
 		if (tcm_hcd->image)
@@ -132,7 +179,6 @@ static int sec_fn_load_fw(struct syna_tcm_hcd *tcm_hcd, const char *file_path)
 				"%s: failed to alloc tcm_hcd->image mem\n", __func__);
 			error = -ENOMEM;
 			vfree(fw_data);
-			filp_close(fp, current->files);
 			goto open_err;
 		}
 
@@ -141,9 +187,8 @@ static int sec_fn_load_fw(struct syna_tcm_hcd *tcm_hcd, const char *file_path)
 		vfree(fw_data);
 	}
 
+open_err:
 	filp_close(fp, current->files);
-
- open_err:
 	set_fs(old_fs);
 	return error;
 }
@@ -166,15 +211,6 @@ static void fw_update(void *device_data)
 	 * 3 : [FFU] Getting firmware from apk.
 	 */
 
-#ifdef CONFIG_SAMSUNG_PRODUCT_SHIP
-	if (sec->cmd_param[0] == UMS) {
-		snprintf(buff, sizeof(buff), "OK");
-		sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
-		sec->cmd_state = SEC_CMD_STATUS_OK;
-		return;
-	}
-#endif
-
 	tcm_hcd->force_update = true;
 
 	switch (sec->cmd_param[0]) {
@@ -183,7 +219,11 @@ static void fw_update(void *device_data)
 		break;
 	case UMS:
 		tcm_hcd->get_fw = UMS;
-		retval = sec_fn_load_fw(tcm_hcd, TSP_PATH_EXTERNAL_FW);
+#ifdef CONFIG_SAMSUNG_PRODUCT_SHIP
+		retval = sec_fn_load_fw(tcm_hcd, SIGNING, TSP_PATH_EXTERNAL_FW_SIGNED);
+#else
+		retval = sec_fn_load_fw(tcm_hcd, NORMAL, TSP_PATH_EXTERNAL_FW);
+#endif
 		if (retval < 0) {
 			tcm_hcd->force_update = false;
 			tcm_hcd->get_fw = BUILT_IN;

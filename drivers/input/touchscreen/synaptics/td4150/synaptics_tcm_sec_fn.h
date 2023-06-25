@@ -39,6 +39,7 @@
 
 #include <linux/vmalloc.h>
 #include <linux/uaccess.h>
+#include <linux/spu-verify.h>
 
 #define TEST_MODE_MIN_MAX		false
 #define TEST_MODE_ALL_NODE		true
@@ -51,6 +52,11 @@ struct sec_factory_test_mode {
 	short min;
 	short max;
 	bool allnode;
+};
+
+enum FW_SIGN {
+	NORMAL = 0,
+	SIGNING = 1,
 };
 
 int run_test(struct syna_tcm_hcd *tcm_hcd, struct sec_factory_test_mode *mode, enum test_code test_code);

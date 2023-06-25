@@ -35,6 +35,10 @@
 #include <linux/trace_events.h>
 #endif
 
+#ifdef CONFIG_CPU_FREQ_LIMIT
+#include <linux/cpufreq_limit.h>
+#endif
+
 static struct mutex boost_freq;
 static struct ppm_limit_data *current_freq;
 static struct ppm_limit_data *freq_set[CPU_MAX_KIR];
@@ -56,6 +60,9 @@ int update_userlimit_cpu_freq(int kicker, int num_cluster
 	int i, j, len = 0, len1 = 0;
 	char msg[LOG_BUF_SIZE];
 	char msg1[LOG_BUF_SIZE];
+#ifdef CONFIG_CPU_FREQ_LIMIT
+	int min_kicker_id = -1;
+#endif
 
 
 	mutex_lock(&boost_freq);
@@ -120,8 +127,15 @@ int update_userlimit_cpu_freq(int kicker, int num_cluster
 
 	for (i = 0; i < CPU_MAX_KIR; i++) {
 		for_each_perfmgr_clusters(j) {
+#ifdef CONFIG_CPU_FREQ_LIMIT
+			if(freq_set[i][j].min > final_freq[j].min){
+				final_freq[j].min = freq_set[i][j].min;
+				min_kicker_id = i;
+			}
+#else
 			final_freq[j].min
 				= MAX(freq_set[i][j].min, final_freq[j].min);
+#endif
 #ifdef CONFIG_MTK_CPU_CTRL_CFP
 			final_freq[j].max
 				= final_freq[j].max != -1 &&
@@ -141,6 +155,15 @@ int update_userlimit_cpu_freq(int kicker, int num_cluster
 	}
 
 	for_each_perfmgr_clusters(i) {
+#ifdef CONFIG_CPU_FREQ_LIMIT
+		if ((cpufreq_limit_get_over_limit() == 1) && (final_freq[i].min > final_freq[i].max && final_freq[i].max != -1)
+		&& (min_kicker_id == CPU_KIR_TOUCH || min_kicker_id == CPU_KIR_PERF || min_kicker_id == CPU_KIR_PERFTOUCH 
+	|| min_kicker_id == CPU_KIR_SEC_TOUCH || min_kicker_id == CPU_KIR_SEC_LIMIT)) {
+			final_freq[i].max = -1;
+
+			pr_debug("%s: if min over max: %d-%d--%d\n", __func__, final_freq[i].min, final_freq[i].max, min_kicker_id);
+		}
+#endif
 		current_freq[i].min = final_freq[i].min;
 		current_freq[i].max = final_freq[i].max;
 		len += snprintf(msg + len, sizeof(msg) - len, "{%d}{%d} ",

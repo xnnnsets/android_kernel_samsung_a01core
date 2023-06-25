@@ -132,6 +132,9 @@
 
 #define CFG_SUPPORT_WAPI			1
 
+/* Enable Detection for 2021 Frag/AGG Attack from WFA */
+#define CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION 1
+
 /*------------------------------------------------------------------------------
 * Flags of WPA3 support
  *------------------------------------------------------------------------------
@@ -813,7 +816,7 @@
 
 #define CFG_SUPPORT_TX_POWER_BACK_OFF       1
 
-#define CFG_SUPPORT_FCC_POWER_BACK_OFF             0
+#define CFG_SUPPORT_FCC_POWER_BACK_OFF             1
 
 
 #define CFG_SUPPORT_P2P_ECSA                       0

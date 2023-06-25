@@ -224,4 +224,6 @@ source "drivers/switch/Kconfig"
 
 source "drivers/motor/Kconfig"
 
+source "drivers/spu_verify/Kconfig"
+
 endmenu

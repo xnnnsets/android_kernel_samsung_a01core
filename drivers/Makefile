@@ -202,3 +202,7 @@ obj-$(CONFIG_SENSORS)		+= sensors/
 obj-$(CONFIG_SWITCH)	+= switch/
 #haptic driver
 obj-$(CONFIG_ANDROID_TIMED_OUTPUT)	+= motor/
+
+# SPU signature verify
+obj-$(CONFIG_SPU_VERIFY) += spu_verify/
+

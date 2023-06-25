@@ -85,7 +85,7 @@ static const struct i2c_device_id ccu_i2c_main2_ids[] = {
 	{CCU_I2C_MAIN2_HW_DRVNAME, 0}, {} };
 static const struct i2c_device_id ccu_i2c_sub_ids[] = {
 	{CCU_I2C_SUB_HW_DRVNAME, 0}, {} };
-static struct ion_handle *i2c_buffer_handle;
+
 static bool ccu_i2c_initialized[CCU_I2C_CHANNEL_MAX] = {0};
 
 #ifdef CONFIG_OF
@@ -243,6 +243,11 @@ int ccu_i2c_set_channel(enum CCU_I2C_CHANNEL channel)
 
 int ccu_i2c_controller_init(enum CCU_I2C_CHANNEL i2c_controller_id)
 {
+	if (i2c_controller_id >= CCU_I2C_CHANNEL_MAX) {
+		LOG_ERR("i2c_id %d is invalid\n", i2c_controller_id);
+		return -EINVAL;
+	}
+
 	if (ccu_i2c_initialized[i2c_controller_id] == MTRUE) {
 	/*if not first time init, release mutex first to avoid deadlock*/
 		LOG_DBG_MUST("reinit, temporily release mutex.\n");
@@ -284,10 +289,10 @@ int ccu_get_i2c_dma_buf_addr(struct ccu_device_s *g_ccu_device,
 }
 
 
-int ccu_i2c_free_dma_buf_mva_all(void)
+int ccu_i2c_free_dma_buf_mva_all(struct ccu_device_s *g_ccu_device)
 {
 
-	ccu_deallocate_mva(&i2c_buffer_handle);
+	ccu_deallocate_mva(g_ccu_device->i2c_dma_mva);
 
 	LOG_INF_MUST("%s done.\n", __func__);
 
@@ -340,8 +345,8 @@ static int i2c_query_dma_buffer_addr(struct ccu_device_s *g_ccu_device,
 
 	if (g_ccu_device->i2c_dma_mva == 0)	{
 		ret = ccu_allocate_mva(&g_ccu_device->i2c_dma_mva,
-			g_ccu_device->i2c_dma_vaddr, &i2c_buffer_handle,
-			CCU_I2C_DMA_BUF_SIZE);
+				g_ccu_device->i2c_dma_vaddr,
+				CCU_I2C_DMA_BUF_SIZE);
 		if (ret != 0) {
 			LOG_ERR("ccu alloc mva fail");
 			return -EFAULT;

@@ -20,4 +20,7 @@ enum {
 extern void cpufreq_limit_set_table(int cpu, struct cpufreq_frequency_table *ftbl);
 extern int set_freq_limit(unsigned int id, int freq);
 
+extern unsigned int cpufreq_limit_get_over_limit(void);
+extern void cpufreq_limit_set_over_limit(unsigned int val);
+
 #endif /* __LINUX_CPUFREQ_LIMIT_H__ */

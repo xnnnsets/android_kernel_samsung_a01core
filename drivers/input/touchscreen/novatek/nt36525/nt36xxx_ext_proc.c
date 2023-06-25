@@ -91,7 +91,7 @@ uint8_t nvt_get_fw_pipe(void)
 	buf[1] = 0x00;
 	CTP_SPI_READ(ts->client, buf, 2);
 
-	//NVT_LOG("FW pipe=%d, buf[1]=0x%02X\n", (buf[1]&0x01), buf[1]);
+	//pr_info("FW pipe=%d, buf[1]=0x%02X\n", (buf[1]&0x01), buf[1]);
 
 	return (buf[1] & 0x01);
 }
@@ -315,7 +315,7 @@ static int32_t nvt_fw_version_open(struct inode *inode, struct file *file)
 		return -ERESTARTSYS;
 	}
 
-	NVT_LOG("++\n");
+	input_info(true, &ts->client->dev,"%s  ++\n",__func__);
 
 #if NVT_TOUCH_ESD_PROTECT
 	nvt_esd_check_enable(false);
@@ -328,7 +328,7 @@ static int32_t nvt_fw_version_open(struct inode *inode, struct file *file)
 
 	mutex_unlock(&ts->lock);
 
-	NVT_LOG("--\n");
+	input_info(true, &ts->client->dev,"%s  --\n",__func__);
 
 	return seq_open(file, &nvt_fw_version_seq_ops);
 }
@@ -354,7 +354,7 @@ static int32_t nvt_baseline_open(struct inode *inode, struct file *file)
 		return -ERESTARTSYS;
 	}
 
-	NVT_LOG("++\n");
+	input_info(true, &ts->client->dev,"%s  ++\n",__func__);
 
 #if NVT_TOUCH_ESD_PROTECT
 	nvt_esd_check_enable(false);
@@ -383,7 +383,7 @@ static int32_t nvt_baseline_open(struct inode *inode, struct file *file)
 
 	mutex_unlock(&ts->lock);
 
-	NVT_LOG("--\n");
+	input_info(true, &ts->client->dev,"%s  --\n",__func__);
 
 	return seq_open(file, &nvt_seq_ops);
 }
@@ -409,7 +409,7 @@ static int32_t nvt_raw_open(struct inode *inode, struct file *file)
 		return -ERESTARTSYS;
 	}
 
-	NVT_LOG("++\n");
+	input_info(true, &ts->client->dev,"%s  ++\n",__func__);
 
 #if NVT_TOUCH_ESD_PROTECT
 	nvt_esd_check_enable(false);
@@ -441,7 +441,7 @@ static int32_t nvt_raw_open(struct inode *inode, struct file *file)
 
 	mutex_unlock(&ts->lock);
 
-	NVT_LOG("--\n");
+	input_info(true, &ts->client->dev,"%s  --\n",__func__);
 
 	return seq_open(file, &nvt_seq_ops);
 }
@@ -467,7 +467,7 @@ static int32_t nvt_diff_open(struct inode *inode, struct file *file)
 		return -ERESTARTSYS;
 	}
 
-	NVT_LOG("++\n");
+	input_info(true, &ts->client->dev,"%s  ++\n",__func__);
 
 #if NVT_TOUCH_ESD_PROTECT
 	nvt_esd_check_enable(false);
@@ -499,7 +499,7 @@ static int32_t nvt_diff_open(struct inode *inode, struct file *file)
 
 	mutex_unlock(&ts->lock);
 
-	NVT_LOG("--\n");
+	input_info(true, &ts->client->dev,"%s  --\n",__func__);
 
 	return seq_open(file, &nvt_seq_ops);
 }
@@ -524,34 +524,34 @@ int32_t nvt_extra_proc_init(void)
 {
 	NVT_proc_fw_version_entry = proc_create(NVT_FW_VERSION, 0444, NULL,&nvt_fw_version_fops);
 	if (NVT_proc_fw_version_entry == NULL) {
-		NVT_ERR("create proc/%s Failed!\n", NVT_FW_VERSION);
+		pr_err("create proc/%s Failed!\n", NVT_FW_VERSION);
 		return -ENOMEM;
 	} else {
-		NVT_LOG("create proc/%s Succeeded!\n", NVT_FW_VERSION);
+		pr_info("create proc/%s Succeeded!\n", NVT_FW_VERSION);
 	}
 
 	NVT_proc_baseline_entry = proc_create(NVT_BASELINE, 0444, NULL,&nvt_baseline_fops);
 	if (NVT_proc_baseline_entry == NULL) {
-		NVT_ERR("create proc/%s Failed!\n", NVT_BASELINE);
+		pr_err("create proc/%s Failed!\n", NVT_BASELINE);
 		return -ENOMEM;
 	} else {
-		NVT_LOG("create proc/%s Succeeded!\n", NVT_BASELINE);
+		pr_info("create proc/%s Succeeded!\n", NVT_BASELINE);
 	}
 
 	NVT_proc_raw_entry = proc_create(NVT_RAW, 0444, NULL,&nvt_raw_fops);
 	if (NVT_proc_raw_entry == NULL) {
-		NVT_ERR("create proc/%s Failed!\n", NVT_RAW);
+		pr_err("create proc/%s Failed!\n", NVT_RAW);
 		return -ENOMEM;
 	} else {
-		NVT_LOG("create proc/%s Succeeded!\n", NVT_RAW);
+		pr_info("create proc/%s Succeeded!\n", NVT_RAW);
 	}
 
 	NVT_proc_diff_entry = proc_create(NVT_DIFF, 0444, NULL,&nvt_diff_fops);
 	if (NVT_proc_diff_entry == NULL) {
-		NVT_ERR("create proc/%s Failed!\n", NVT_DIFF);
+		pr_err("create proc/%s Failed!\n", NVT_DIFF);
 		return -ENOMEM;
 	} else {
-		NVT_LOG("create proc/%s Succeeded!\n", NVT_DIFF);
+		pr_info("create proc/%s Succeeded!\n", NVT_DIFF);
 	}
 
 	return 0;
@@ -570,25 +570,25 @@ void nvt_extra_proc_deinit(void)
 	if (NVT_proc_fw_version_entry != NULL) {
 		remove_proc_entry(NVT_FW_VERSION, NULL);
 		NVT_proc_fw_version_entry = NULL;
-		NVT_LOG("Removed /proc/%s\n", NVT_FW_VERSION);
+		pr_info("Removed /proc/%s\n", NVT_FW_VERSION);
 	}
 
 	if (NVT_proc_baseline_entry != NULL) {
 		remove_proc_entry(NVT_BASELINE, NULL);
 		NVT_proc_baseline_entry = NULL;
-		NVT_LOG("Removed /proc/%s\n", NVT_BASELINE);
+		pr_info("Removed /proc/%s\n", NVT_BASELINE);
 	}
 
 	if (NVT_proc_raw_entry != NULL) {
 		remove_proc_entry(NVT_RAW, NULL);
 		NVT_proc_raw_entry = NULL;
-		NVT_LOG("Removed /proc/%s\n", NVT_RAW);
+		pr_info("Removed /proc/%s\n", NVT_RAW);
 	}
 
 	if (NVT_proc_diff_entry != NULL) {
 		remove_proc_entry(NVT_DIFF, NULL);
 		NVT_proc_diff_entry = NULL;
-		NVT_LOG("Removed /proc/%s\n", NVT_DIFF);
+		pr_info("Removed /proc/%s\n", NVT_DIFF);
 	}
 }
 #endif

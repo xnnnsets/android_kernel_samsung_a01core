@@ -18,32 +18,14 @@
 
 #define CLUSTER_NUM 1
 
-/* cpu frequency table from cpufreq dt parse */
-/*static struct cpufreq_frequency_table *cpuftbl_L;
-static struct cpufreq_frequency_table *cpuftbl_b;*/
 static struct cpufreq_frequency_table *cpuftbl;
+static unsigned int over_limit_param;
 
 static struct ppm_limit_data *freq_to_set;
 DEFINE_MUTEX(cpufreq_limit_mutex);
 
-/*struct cpufreq_limit_parameter {
-	unsigned int	ltl_cpu_start;
-	unsigned int	big_cpu_start;
-};
-
-For MT6768
-struct cpufreq_limit_parameter param = {
-	.ltl_cpu_start		= 0,
-	.big_cpu_start		= 6,
-};*/
-
 void cpufreq_limit_set_table(int cpu, struct cpufreq_frequency_table *ftbl)
 {
-	/*For MT6768
-	if ( cpu == param.big_cpu_start )
-		cpuftbl_b = ftbl;
-	else if ( cpu == param.ltl_cpu_start )
-		cpuftbl_L = ftbl;*/
 	cpuftbl = ftbl;
 }
 
@@ -185,6 +167,45 @@ out:
 	return ret;
 }
 
+void cpufreq_limit_set_over_limit(unsigned int val)
+{
+	over_limit_param = val;
+	update_userlimit_cpu_freq(CPU_KIR_SEC_LIMIT, CLUSTER_NUM, freq_to_set);	
+}
+
+unsigned int cpufreq_limit_get_over_limit(void)
+{
+	return over_limit_param;
+}
+
+static ssize_t over_limit_show(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	return sprintf(buf, "%d\n", cpufreq_limit_get_over_limit());
+}
+
+static ssize_t over_limit_store(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					const char *buf, size_t n)
+{
+	unsigned int val;
+	ssize_t ret = -EINVAL;
+
+	ret = kstrtoint(buf, 10, &val);
+	if (ret < 0) {
+		pr_err("%s: Invalid cpufreq format\n", __func__);
+		goto out;
+	}
+
+	mutex_lock(&cpufreq_limit_mutex);
+	cpufreq_limit_set_over_limit((unsigned int)val);
+	mutex_unlock(&cpufreq_limit_mutex);
+	ret = n;
+out:
+	return ret;
+}
+
 #define cpufreq_limit_attr(_name)				\
 static struct kobj_attribute _name##_attr = {	\
 	.attr	= {									\
@@ -207,11 +228,13 @@ static struct kobj_attribute _name##_attr = {	\
 cpufreq_limit_attr_ro(cpufreq_table);
 cpufreq_limit_attr(cpufreq_max_limit);
 cpufreq_limit_attr(cpufreq_min_limit);
+cpufreq_limit_attr(over_limit);
 
 static struct attribute * g[] = {
 	&cpufreq_table_attr.attr,
 	&cpufreq_max_limit_attr.attr,
 	&cpufreq_min_limit_attr.attr,
+	&over_limit_attr.attr,
 	NULL,
 };
 

@@ -790,7 +790,7 @@ static void glLoadNvram(IN P_GLUE_INFO_T prGlueInfo, OUT P_REG_INFO_T prRegInfo)
 	prRegInfo->aucChannelBandEdge[0] = (UINT_8) aucTmp[0];
 	prRegInfo->aucChannelBandEdge[1] = (UINT_8) aucTmp[1];
 
-	DBGLOG(INIT, TRACE, "rFccTxPwrAdjust offset:%ld, value:%d, %d, %d, %d, [%d, %d], [%d, %d], [%d, %d]\n",
+	DBGLOG(INIT, INFO, "rFccTxPwrAdjust offset:%ld, value:%d, %d, %d, %d, [%d, %d], [%d, %d], [%d, %d]\n",
 	       OFFSET_OF(WIFI_CFG_PARAM_STRUCT, rFccTxPwrAdjust),
 	       prRegInfo->rFccTxPwrAdjust.fgFccTxPwrAdjust,
 	       prRegInfo->rFccTxPwrAdjust.uOffsetCCK,
@@ -803,12 +803,12 @@ static void glLoadNvram(IN P_GLUE_INFO_T prGlueInfo, OUT P_REG_INFO_T prRegInfo)
 	       prRegInfo->rFccTxPwrAdjust.aucChannelHT40[0],
 	       prRegInfo->rFccTxPwrAdjust.aucChannelHT40[1]);
 
-	DBGLOG(INIT, TRACE, "FCC Tx power channel band edge [%d, %d]\n",
+	DBGLOG(INIT, INFO, "FCC Tx power channel band edge [%d, %d]\n",
 		prRegInfo->aucChannelBandEdge[0], prRegInfo->aucChannelBandEdge[1]);
 #endif
 	startAddr = OFFSET_OF(REG_INFO_T, aucMacAddr);
 	len = sizeof(REG_INFO_T);
-	DBGLOG_MEM8_IE_ONE_LINE(INIT, INFO, "RegInfo", (PUINT_8)prRegInfo + startAddr, len);
+	//DBGLOG_MEM8_IE_ONE_LINE(INIT, INFO, "RegInfo", (PUINT_8)prRegInfo + startAddr, len);
 }
 
 #if CFG_ENABLE_WIFI_DIRECT
@@ -3090,6 +3090,7 @@ bailout:
 			break;
 		}
 #endif /* WLAN_INCLUDE_PROC */
+
 #if WLAN_INCLUDE_SYS
 		i4Status = sysCreateFsEntry(prGlueInfo);
 		if (i4Status < 0) {
@@ -3098,6 +3099,7 @@ bailout:
 			break;
 		}
 #endif /* WLAN_INCLUDE_SYS */
+
 #ifdef FW_CFG_SUPPORT
 		i4Status = cfgCreateProcEntry(prGlueInfo);
 		if (i4Status < 0) {
@@ -3562,6 +3564,9 @@ static VOID exitWlan(void)
 
 	DBGLOG(INIT, INFO, "exitWlan\n");
 	procUninitProcFs();
+#if WLAN_INCLUDE_SYS
+	sysUninitSysFs();
+#endif
 
 }				/* end of exitWlan() */
 

@@ -1292,7 +1292,6 @@ endmenu
 
 config SEC_GPIO_DVS
 	tristate "setting Samsung GPIO debugging and verification system"
-	default y
 	help
 	  To verify gpio configurations of devices, set this feature.
 	  This feature should be enabled for user-debug mode.

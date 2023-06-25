@@ -75,19 +75,19 @@ static int32_t nvt_get_fw_need_write_size(const struct firmware *fw_entry)
 		/* check if there is end flag "NVT" at the end of this sector */
 		if (strncmp(&fw_entry->data[i * FLASH_SECTOR_SIZE - NVT_FLASH_END_FLAG_LEN], "NVT", NVT_FLASH_END_FLAG_LEN) == 0) {
 			fw_need_write_size = i * FLASH_SECTOR_SIZE;
-			NVT_LOG("fw_need_write_size = %zu(0x%zx), NVT end flag\n", fw_need_write_size, fw_need_write_size);
+			pr_info("fw_need_write_size = %zu(0x%zx), NVT end flag\n", fw_need_write_size, fw_need_write_size);
 			return 0;
 		}
 
 		/* check if there is end flag "MOD" at the end of this sector */
 		if (strncmp(&fw_entry->data[i * FLASH_SECTOR_SIZE - NVT_FLASH_END_FLAG_LEN], "MOD", NVT_FLASH_END_FLAG_LEN) == 0) {
 			fw_need_write_size = i * FLASH_SECTOR_SIZE;
-			NVT_LOG("fw_need_write_size = %zu(0x%zx), MOD end flag\n", fw_need_write_size, fw_need_write_size);
+			pr_info("fw_need_write_size = %zu(0x%zx), MOD end flag\n", fw_need_write_size, fw_need_write_size);
 			return 0;
 		}
 	}
 
-	NVT_ERR("end flag \"NVT\" \"MOD\" not found!\n");
+	pr_err("end flag \"NVT\" \"MOD\" not found!\n");
 	return -1;
 }
 
@@ -102,12 +102,12 @@ return:
 static int32_t nvt_download_init(void)
 {
 	/* allocate buffer for transfer firmware */
-	//NVT_LOG("NVT_TRANSFER_LEN = 0x%06X\n", NVT_TRANSFER_LEN);
+	//pr_info("NVT_TRANSFER_LEN = 0x%06X\n", NVT_TRANSFER_LEN);
 
 	if (fwbuf == NULL) {
 		fwbuf = (uint8_t *)kzalloc((NVT_TRANSFER_LEN + 1 + DUMMY_BYTES), GFP_KERNEL);
 		if(fwbuf == NULL) {
-			NVT_ERR("kzalloc for fwbuf failed!\n");
+			pr_err("kzalloc for fwbuf failed!\n");
 			return -ENOMEM;
 		}
 	}
@@ -181,13 +181,13 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 	 * ilm_dlm_num (ILM & DLM) + ovly_sec_num + info_sec_num
 	 */
 	partition = ilm_dlm_num + ovly_sec_num + info_sec_num;
-	NVT_LOG("ovly_info = %d, ilm_dlm_num = %d, ovly_sec_num = %d, info_sec_num = %d, partition = %d\n",
+	pr_info("ovly_info = %d, ilm_dlm_num = %d, ovly_sec_num = %d, info_sec_num = %d, partition = %d\n",
 			ovly_info, ilm_dlm_num, ovly_sec_num, info_sec_num, partition);
 
 	/* allocated memory for header info */
 	bin_map = (struct nvt_ts_bin_map *)kzalloc((partition+1) * sizeof(struct nvt_ts_bin_map), GFP_KERNEL);
 	if(bin_map == NULL) {
-		NVT_ERR("kzalloc for bin_map failed!\n");
+		pr_err("kzalloc for bin_map failed!\n");
 		return -ENOMEM;
 	}
 
@@ -207,7 +207,7 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 				if ((bin_map[list].BIN_addr + bin_map[list].size) < fwsize)
 					bin_map[list].crc = CheckSum(&fwdata[bin_map[list].BIN_addr], bin_map[list].size);
 				else {
-					NVT_ERR("access range (0x%08X to 0x%08X) is larger than bin size!\n",
+					pr_err("access range (0x%08X to 0x%08X) is larger than bin size!\n",
 							bin_map[list].BIN_addr, bin_map[list].BIN_addr + bin_map[list].size);
 					return -EINVAL;
 				}
@@ -235,7 +235,7 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 				if ((bin_map[list].BIN_addr + bin_map[list].size) < fwsize)
 					bin_map[list].crc = CheckSum(&fwdata[bin_map[list].BIN_addr], bin_map[list].size);
 				else {
-					NVT_ERR("access range (0x%08X to 0x%08X) is larger than bin size!\n",
+					pr_err("access range (0x%08X to 0x%08X) is larger than bin size!\n",
 							bin_map[list].BIN_addr, bin_map[list].BIN_addr + bin_map[list].size);
 					return -EINVAL;
 				}
@@ -265,7 +265,7 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 				if ((bin_map[list].BIN_addr + bin_map[list].size) < fwsize)
 					bin_map[list].crc = CheckSum(&fwdata[bin_map[list].BIN_addr], bin_map[list].size);
 				else {
-					NVT_ERR("access range (0x%08X to 0x%08X) is larger than bin size!\n",
+					pr_err("access range (0x%08X to 0x%08X) is larger than bin size!\n",
 							bin_map[list].BIN_addr, bin_map[list].BIN_addr + bin_map[list].size);
 					return -EINVAL;
 				}
@@ -275,12 +275,12 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 
 		/* BIN size error detect */
 		if ((bin_map[list].BIN_addr + bin_map[list].size) > fwsize) {
-			NVT_ERR("access range (0x%08X to 0x%08X) is larger than bin size!\n",
+			pr_err("access range (0x%08X to 0x%08X) is larger than bin size!\n",
 					bin_map[list].BIN_addr, bin_map[list].BIN_addr + bin_map[list].size);
 			return -EINVAL;
 		}
 
-//		NVT_LOG("[%d][%s] SRAM (0x%08X), SIZE (0x%08X), BIN (0x%08X), CRC (0x%08X)\n",
+//		pr_info("[%d][%s] SRAM (0x%08X), SIZE (0x%08X), BIN (0x%08X), CRC (0x%08X)\n",
 //				list, bin_map[list].name,
 //				bin_map[list].SRAM_addr, bin_map[list].size,  bin_map[list].BIN_addr, bin_map[list].crc);
 	}
@@ -321,15 +321,15 @@ static int32_t update_firmware_request(char *filename)
 	}
 
 	while (1) {
-		NVT_LOG("filename is %s\n", filename);
+		input_info(true, &ts->client->dev,"filename is %s\n", filename);
 
 		if(ts->isUMS) {
-			NVT_LOG("%s ts->isUMS\n", __func__);
+			input_info(true, &ts->client->dev,"%s ts->isUMS\n", __func__);
 			if(tmp_fw_entry.data != NULL) {
-				NVT_LOG("%s UMS FW present\n", __func__);
+				input_info(true, &ts->client->dev,"%s UMS FW present\n", __func__);
 				fw_entry = &tmp_fw_entry;
 			} else {
-				NVT_LOG("%s UMS FW NOT present\n", __func__);
+				input_info(true, &ts->client->dev,"%s UMS FW NOT present\n", __func__);
 				ts->isUMS = false;
 			}
 		}
@@ -337,22 +337,22 @@ static int32_t update_firmware_request(char *filename)
 		if(!ts->isUMS){
 			ret = request_firmware(&fw_entry, filename, &ts->client->dev);
 			if (ret) {
-			NVT_ERR("firmware load failed, ret=%d\n", ret);
+			input_err(true, &ts->client->dev,"firmware load failed, ret=%d\n", ret);
 			goto request_fail;
 			}
 		}
 
 		// check FW need to write size
 		if (nvt_get_fw_need_write_size(fw_entry)) {
-			NVT_ERR("get fw need to write size fail!\n");
+			input_err(true, &ts->client->dev,"get fw need to write size fail!\n");
 			ret = -EINVAL;
 			goto invalid;
 		}
 
 		// check if FW version add FW version bar equals 0xFF
 		if (*(fw_entry->data + FW_BIN_VER_OFFSET) + *(fw_entry->data + FW_BIN_VER_BAR_OFFSET) != 0xFF) {
-			NVT_ERR("bin file FW_VER + FW_VER_BAR should be 0xFF!\n");
-			NVT_ERR("FW_VER=0x%02X, FW_VER_BAR=0x%02X\n", *(fw_entry->data+FW_BIN_VER_OFFSET), *(fw_entry->data+FW_BIN_VER_BAR_OFFSET));
+			input_err(true, &ts->client->dev,"bin file FW_VER + FW_VER_BAR should be 0xFF!\n");
+			input_err(true, &ts->client->dev,"FW_VER=0x%02X, FW_VER_BAR=0x%02X\n", *(fw_entry->data+FW_BIN_VER_OFFSET), *(fw_entry->data+FW_BIN_VER_BAR_OFFSET));
 			ret = -ENOEXEC;
 			goto invalid;
 		}
@@ -360,7 +360,7 @@ static int32_t update_firmware_request(char *filename)
 		/* BIN Header Parser */
 		ret = nvt_bin_header_parser(fw_entry->data, fw_entry->size);
 		if (ret) {
-			NVT_ERR("bin header parser failed\n");
+			input_err(true, &ts->client->dev,"bin header parser failed\n");
 			goto invalid;
 		} else {
 			ts->fw_ver_bin[0] = fw_entry->data[FW_BIN_IC_ID];
@@ -369,16 +369,16 @@ static int32_t update_firmware_request(char *filename)
 			ts->fw_ver_bin[3] = fw_entry->data[FW_BIN_VER_OFFSET];
 			ts->fw_ver_bin_bar = fw_entry->data[FW_BIN_VER_BAR_OFFSET];
 
-			NVT_LOG("%s: fw_ver_bin = %02X%02X%02X%02X\n", __func__,
+			input_err(true, &ts->client->dev,"%s: fw_ver_bin = %02X%02X%02X%02X\n", __func__,
 				ts->fw_ver_bin[0], ts->fw_ver_bin[1], ts->fw_ver_bin[2], ts->fw_ver_bin[3]);
 			break;
 		}
 
 invalid:
 		if(ts->isUMS) {
-			NVT_LOG("%s UMS Update NO update_firmware_release\n", __func__);
+			input_info(true, &ts->client->dev,"%s UMS Update NO update_firmware_release\n", __func__);
 		} else {
-			NVT_LOG("%s BUILT-IN Update update_firmware_release\n", __func__);
+			input_info(true, &ts->client->dev,"%s BUILT-IN Update update_firmware_release\n", __func__);
 			update_firmware_release();
 		}
 		if (!IS_ERR_OR_NULL(bin_map)) {
@@ -389,7 +389,7 @@ invalid:
 request_fail:
 		retry++;
 		if(unlikely(retry > 2)) {
-			NVT_ERR("error, retry=%d\n", retry);
+			input_err(true, &ts->client->dev,"error, retry=%d\n", retry);
 			break;
 		}
 	}
@@ -415,11 +415,11 @@ static int32_t nvt_read_ram_and_save_file(uint32_t addr, uint16_t len, char *nam
 	mm_segment_t org_fs;
 
 	sprintf(file, "%s/dump_%s.bin", NVT_DUMP_PARTITION_PATH, name);
-	NVT_LOG("Dump [%s] from 0x%08X to 0x%08X\n", file, addr, addr+len);
+	pr_info("Dump [%s] from 0x%08X to 0x%08X\n", file, addr, addr+len);
 
 	fbufp = (uint8_t *)kzalloc(len+1, GFP_KERNEL);
 	if(fbufp == NULL) {
-		NVT_ERR("kzalloc for fbufp failed!\n");
+		pr_err("kzalloc for fbufp failed!\n");
 		ret = -ENOMEM;
 		goto alloc_buf_fail;
 	}
@@ -429,7 +429,7 @@ static int32_t nvt_read_ram_and_save_file(uint32_t addr, uint16_t len, char *nam
 	fp = filp_open(file, O_RDWR | O_CREAT, 0644);
 	if (fp == NULL || IS_ERR(fp)) {
 		ret = -ENOMEM;
-		NVT_ERR("open file failed\n");
+		pr_err("open file failed\n");
 		goto open_file_fail;
 	}
 
@@ -443,7 +443,7 @@ static int32_t nvt_read_ram_and_save_file(uint32_t addr, uint16_t len, char *nam
 	/* Write to file */
 	ret = vfs_write(fp, (char __user *)fbufp+1, len, &file_offset);
 	if (ret != len) {
-		NVT_ERR("write file failed\n");
+		pr_err("write file failed\n");
 		goto open_file_fail;
 	} else {
 		ret = 0;
@@ -484,16 +484,16 @@ static int32_t nvt_dump_partition(void)
 	int32_t ret = 0;
 
 	if (NVT_DUMP_PARTITION_LEN >= sizeof(ts->rbuf)) {
-		NVT_ERR("dump len %d is larger than buffer size %ld\n",
+		pr_err("dump len %d is larger than buffer size %ld\n",
 				NVT_DUMP_PARTITION_LEN, sizeof(ts->rbuf));
 		return -EINVAL;
 	} else if (NVT_DUMP_PARTITION_LEN >= NVT_TRANSFER_LEN) {
-		NVT_ERR("dump len %d is larger than NVT_TRANSFER_LEN\n", NVT_DUMP_PARTITION_LEN);
+		pr_err("dump len %d is larger than NVT_TRANSFER_LEN\n", NVT_DUMP_PARTITION_LEN);
 		return -EINVAL;
 	}
 
 	if (bin_map == NULL) {
-		NVT_ERR("bin_map is NULL\n");
+		pr_err("bin_map is NULL\n");
 		return -ENOMEM;
 	}
 
@@ -523,7 +523,7 @@ static int32_t nvt_dump_partition(void)
 			/* dump for debug download firmware */
 			ret = nvt_read_ram_and_save_file(SRAM_addr, len, name);
 			if (ret < 0) {
-				NVT_ERR("nvt_read_ram_and_save_file failed, ret = %d\n", ret);
+				pr_err("nvt_read_ram_and_save_file failed, ret = %d\n", ret);
 				goto out;
 			}
 
@@ -570,7 +570,7 @@ static int32_t nvt_write_sram(const u8 *fwdata,
 		//---set xdata index to start address of SRAM---
 		ret = nvt_set_page(SRAM_addr);
 		if (ret) {
-			NVT_ERR("set page failed, ret = %d\n", ret);
+			pr_err("set page failed, ret = %d\n", ret);
 			return ret;
 		}
 
@@ -579,7 +579,7 @@ static int32_t nvt_write_sram(const u8 *fwdata,
 		memcpy(fwbuf+1, &fwdata[BIN_addr], len);	//payload
 		ret = CTP_SPI_WRITE(ts->client, fwbuf, len+1);
 		if (ret) {
-			NVT_ERR("write to sram failed, ret = %d\n", ret);
+			pr_err("write to sram failed, ret = %d\n", ret);
 			return ret;
 		}
 
@@ -615,12 +615,12 @@ static int32_t nvt_write_firmware(const u8 *fwdata, size_t fwsize)
 		BIN_addr = bin_map[list].BIN_addr;
 		name = bin_map[list].name;
 
-//		NVT_LOG("[%d][%s] SRAM (0x%08X), SIZE (0x%08X), BIN (0x%08X)\n",
+//		pr_info("[%d][%s] SRAM (0x%08X), SIZE (0x%08X), BIN (0x%08X)\n",
 //				list, name, SRAM_addr, size, BIN_addr);
 
 		/* Check data size */
 		if ((BIN_addr + size) > fwsize) {
-			NVT_ERR("access range (0x%08X to 0x%08X) is larger than bin size!\n",
+			pr_err("access range (0x%08X to 0x%08X) is larger than bin size!\n",
 					BIN_addr, BIN_addr + size);
 			ret = -EINVAL;
 			goto out;
@@ -635,7 +635,7 @@ static int32_t nvt_write_firmware(const u8 *fwdata, size_t fwsize)
 		/* write data to SRAM */
 		ret = nvt_write_sram(fwdata, SRAM_addr, size, BIN_addr);
 		if (ret) {
-			NVT_ERR("sram program failed, ret = %d\n", ret);
+			pr_err("sram program failed, ret = %d\n", ret);
 			goto out;
 		}
 	}
@@ -668,7 +668,7 @@ static int32_t nvt_check_fw_checksum(void)
 	fwbuf[0] = (ts->mmap->R_ILM_CHECKSUM_ADDR) & 0x7F;
 	ret = CTP_SPI_READ(ts->client, fwbuf, len+1);
 	if (ret) {
-		NVT_ERR("Read fw checksum failed\n");
+		input_err(true, &ts->client->dev,"Read fw checksum failed\n");
 		return ret;
 	}
 
@@ -685,7 +685,7 @@ static int32_t nvt_check_fw_checksum(void)
 			continue;
 
 		if (bin_map[list].crc != fw_checksum) {
-			NVT_ERR("[%d] BIN_checksum=0x%08X, FW_checksum=0x%08X\n",
+			input_err(true, &ts->client->dev,"[%d] BIN_checksum=0x%08X, FW_checksum=0x%08X\n",
 					list, bin_map[list].crc, fw_checksum);
 			ret = -EIO;
 		}
@@ -703,7 +703,7 @@ int nvt_get_checksum(struct nvt_ts_data *ts, u8 *csum_result, u8 csum_size)
 	u8 temp[BLOCK_64KB_NUM * 4 + 1] = { 0 };
 
 	if ((len > csum_size) && (!ts->hw_crc)) {
-		NVT_ERR("Buffer size is too short!\n");
+		input_err(true, &ts->client->dev,"Buffer size is too short!\n");
 		return -EINVAL;
 	}
 
@@ -716,7 +716,7 @@ int nvt_get_checksum(struct nvt_ts_data *ts, u8 *csum_result, u8 csum_size)
 	fwbuf[0] = (ts->mmap->R_ILM_CHECKSUM_ADDR) & 0x7F;
 	ret = CTP_SPI_READ(ts->client, fwbuf, len+1);
 	if (ret) {
-		NVT_ERR("Read fw checksum failed\n");
+		input_err(true, &ts->client->dev,"Read fw checksum failed\n");
 		return ret;
 	}
 
@@ -835,7 +835,7 @@ static void nvt_read_bld_hw_crc(void)
 	buf[0] = ts->mmap->BLD_ILM_DLM_CRC_ADDR & 0x7F;
 	buf[1] = 0x00;
 	CTP_SPI_READ(ts->client, buf, 2);
-	NVT_ERR("crc_done = %d, ilm_crc_flag = %d, dlm_crc_flag = %d\n",
+	input_info(true, &ts->client->dev,"crc_done = %d, ilm_crc_flag = %d, dlm_crc_flag = %d\n",
 			(buf[1] >> 2) & 0x01, (buf[1] >> 0) & 0x01, (buf[1] >> 1) & 0x01);
 
 	/* ILM CRC */
@@ -857,7 +857,7 @@ static void nvt_read_bld_hw_crc(void)
 	CTP_SPI_READ(ts->client, buf, 5);
 	r_crc = buf[1] | (buf[2] << 8) | (buf[3] << 16) | (buf[4] << 24);
 
-	NVT_ERR("ilm: bin crc = 0x%08X, golden = 0x%08X, result = 0x%08X\n",
+	input_info(true, &ts->client->dev,"ilm: bin crc = 0x%08X, golden = 0x%08X, result = 0x%08X\n",
 			bin_map[0].crc, g_crc, r_crc);
 
 	/* DLM CRC */
@@ -879,7 +879,7 @@ static void nvt_read_bld_hw_crc(void)
 	CTP_SPI_READ(ts->client, buf, 5);
 	r_crc = buf[1] | (buf[2] << 8) | (buf[3] << 16) | (buf[4] << 24);
 
-	NVT_ERR("dlm: bin crc = 0x%08X, golden = 0x%08X, result = 0x%08X\n",
+	input_info(true, &ts->client->dev,"dlm: bin crc = 0x%08X, golden = 0x%08X, result = 0x%08X\n",
 			bin_map[1].crc, g_crc, r_crc);
 
 	return;
@@ -907,14 +907,14 @@ static int32_t nvt_download_firmware_hw_crc(void)
 		/* Start to write firmware process */
 		ret = nvt_write_firmware(fw_entry->data, fw_entry->size);
 		if (ret) {
-			NVT_ERR("Write_Firmware failed. (%d)\n", ret);
+			pr_err("Write_Firmware failed. (%d)\n", ret);
 			goto fail;
 		}
 
 #if NVT_DUMP_PARTITION
 		ret = nvt_dump_partition();
 		if (ret) {
-			NVT_ERR("nvt_dump_partition failed, ret = %d\n", ret);
+			pr_err("nvt_dump_partition failed, ret = %d\n", ret);
 		}
 #endif
 
@@ -932,7 +932,7 @@ static int32_t nvt_download_firmware_hw_crc(void)
 
 		ret = nvt_check_fw_reset_state(RESET_STATE_INIT);
 		if (ret) {
-			NVT_ERR("nvt_check_fw_reset_state failed. (%d)\n", ret);
+			pr_err("nvt_check_fw_reset_state failed. (%d)\n", ret);
 			goto fail;
 		} else {
 			break;
@@ -941,7 +941,7 @@ static int32_t nvt_download_firmware_hw_crc(void)
 fail:
 		retry++;
 		if(unlikely(retry > 2)) {
-			NVT_ERR("error, retry=%d\n", retry);
+			pr_err("error, retry=%d\n", retry);
 			nvt_read_bld_hw_crc();
 			break;
 		}
@@ -989,14 +989,14 @@ static int32_t nvt_download_firmware(void)
 		/* Start to write firmware process */
 		ret = nvt_write_firmware(fw_entry->data, fw_entry->size);
 		if (ret) {
-			NVT_ERR("Write_Firmware failed. (%d)\n", ret);
+			input_err(true, &ts->client->dev,"Write_Firmware failed. (%d)\n", ret);
 			goto fail;
 		}
 
 #if NVT_DUMP_PARTITION
 		ret = nvt_dump_partition();
 		if (ret) {
-			NVT_ERR("nvt_dump_partition failed, ret = %d\n", ret);
+			input_err(true, &ts->client->dev,"nvt_dump_partition failed, ret = %d\n", ret);
 		}
 #endif
 
@@ -1005,14 +1005,14 @@ static int32_t nvt_download_firmware(void)
 
 		ret = nvt_check_fw_reset_state(RESET_STATE_INIT);
 		if (ret) {
-			NVT_ERR("nvt_check_fw_reset_state failed. (%d)\n", ret);
+			input_err(true, &ts->client->dev,"nvt_check_fw_reset_state failed. (%d)\n", ret);
 			goto fail;
 		}
 
 		/* check fw checksum result */
 		ret = nvt_check_fw_checksum();
 		if (ret) {
-			NVT_ERR("firmware checksum not match, retry=%d\n", retry);
+			input_err(true, &ts->client->dev,"firmware checksum not match, retry=%d\n", retry);
 			goto fail;
 		} else {
 			break;
@@ -1021,7 +1021,7 @@ static int32_t nvt_download_firmware(void)
 fail:
 		retry++;
 		if(unlikely(retry > 2)) {
-			NVT_ERR("error, retry=%d\n", retry);
+			input_err(true, &ts->client->dev,"error, retry=%d\n", retry);
 			break;
 		}
 	}
@@ -1045,14 +1045,14 @@ int32_t nvt_update_firmware(char *firmware_name)
 	// request bin file in "/etc/firmware"
 	ret = update_firmware_request(firmware_name);
 	if (ret) {
-		NVT_ERR("update_firmware_request failed. (%d)\n", ret);
+		input_err(true, &ts->client->dev,"update_firmware_request failed. (%d)\n", ret);
 		goto request_firmware_fail;
 	}
 
 	/* initial buffer and variable */
 	ret = nvt_download_init();
 	if (ret) {
-		NVT_ERR("Download Init failed. (%d)\n", ret);
+		input_err(true, &ts->client->dev,"Download Init failed. (%d)\n", ret);
 		goto download_fail;
 	}
 
@@ -1062,17 +1062,17 @@ int32_t nvt_update_firmware(char *firmware_name)
 	else
 		ret = nvt_download_firmware();
 	if (ret) {
-		NVT_ERR("Download Firmware failed. (%d)\n", ret);
+		input_err(true, &ts->client->dev,"Download Firmware failed. (%d)\n", ret);
 		goto download_fail;
 	}
 
-	NVT_LOG("Update firmware success! <%ld us>\n",
+	pr_info("Update firmware success! <%ld us>\n",
 			(end.tv_sec - start.tv_sec)*1000000L + (end.tv_usec - start.tv_usec));
 
 	/* Get FW Info */
 	ret = nvt_get_fw_info();
 	if (ret) {
-		NVT_ERR("nvt_get_fw_info failed. (%d)\n", ret);
+		input_err(true, &ts->client->dev,"nvt_get_fw_info failed. (%d)\n", ret);
 	}
 
 download_fail:
@@ -1081,9 +1081,9 @@ download_fail:
 		bin_map = NULL;
 	}
 	if(ts->isUMS) {
-			NVT_LOG("%s UMS Update NO update_firmware_release\n", __func__);
+			input_info(true, &ts->client->dev,"%s UMS Update NO update_firmware_release\n", __func__);
 	} else {
-		NVT_LOG("%s BUILT-IN Update update_firmware_release\n", __func__);
+		input_info(true, &ts->client->dev,"%s BUILT-IN Update update_firmware_release\n", __func__);
 		update_firmware_release();
 	}
 request_firmware_fail:
@@ -1106,7 +1106,7 @@ int nvt_ts_fw_update_from_ums(struct nvt_ts_data *ts)
 
 	fp = filp_open(NVT_TS_DEFAULT_UMS_FW, O_RDONLY, S_IRUSR);
 	if (IS_ERR(fp)) {
-		NVT_ERR("%s: failed to open %s\n",
+		input_err(true, &ts->client->dev,"%s: failed to open %s\n",
 			__func__, NVT_TS_DEFAULT_UMS_FW);
 			mutex_unlock(&ts->lock);
 			set_fs(old_fs);
@@ -1124,21 +1124,21 @@ int nvt_ts_fw_update_from_ums(struct nvt_ts_data *ts)
 
 		fw_data = vzalloc(fw_size);
 		if (!fw_data) {
-			NVT_ERR("%s: failed to alloc mem\n", __func__);
+			input_err(true, &ts->client->dev,"%s: failed to alloc mem\n", __func__);
 			ret = -ENOMEM;
 			goto out;
 		}
 
 		nread = vfs_read(fp, (char __user *)fw_data, fw_size, &fp->f_pos);
 		if (nread != fw_size) {
-			NVT_ERR("%s: failed to read firmware file, nread %ld Bytes\n",
+			input_err(true, &ts->client->dev,"%s: failed to read firmware file, nread %ld Bytes\n",
 				__func__, nread);
 			ret = -EIO;
 
 		} else {
-			NVT_LOG("%s: start, file path %s, size %ld Bytes\n",
+			input_info(true, &ts->client->dev,"%s: start, file path %s, size %ld Bytes\n",
 				__func__, NVT_TS_DEFAULT_UMS_FW, fw_size);
-			NVT_LOG("%s: firmware version %02X\n",
+			input_info(true, &ts->client->dev,"%s: firmware version %02X\n",
 				__func__, fw_data[FW_BIN_VER_OFFSET]);
 
 //			if (ts->client->irq)
@@ -1159,15 +1159,15 @@ int nvt_ts_fw_update_from_ums(struct nvt_ts_data *ts)
 //				enable_irq(ts->client->irq);
 			// check FW need to write size
 			if (nvt_get_fw_need_write_size(fw_entry)) {
-				NVT_ERR("get fw need to write size fail!\n");
+				input_err(true, &ts->client->dev,"get fw need to write size fail!\n");
 				ret = -EINVAL;
 				goto download_fail;
 			}
 
 			// check if FW version add FW version bar equals 0xFF
 			if (*(fw_entry->data + FW_BIN_VER_OFFSET) + *(fw_entry->data + FW_BIN_VER_BAR_OFFSET) != 0xFF) {
-				NVT_ERR("bin file FW_VER + FW_VER_BAR should be 0xFF!\n");
-				NVT_ERR("FW_VER=0x%02X, FW_VER_BAR=0x%02X\n", *(fw_entry->data+FW_BIN_VER_OFFSET), *(fw_entry->data+FW_BIN_VER_BAR_OFFSET));
+				input_err(true, &ts->client->dev,"bin file FW_VER + FW_VER_BAR should be 0xFF!\n");
+				input_err(true, &ts->client->dev,"FW_VER=0x%02X, FW_VER_BAR=0x%02X\n", *(fw_entry->data+FW_BIN_VER_OFFSET), *(fw_entry->data+FW_BIN_VER_BAR_OFFSET));
 				ret = -ENOEXEC;
 				goto download_fail;
 			}
@@ -1175,7 +1175,7 @@ int nvt_ts_fw_update_from_ums(struct nvt_ts_data *ts)
 			/* BIN Header Parser */
 			ret = nvt_bin_header_parser(fw_entry->data, fw_entry->size);
 			if (ret) {
-				NVT_ERR("bin header parser failed\n");
+				input_err(true, &ts->client->dev,"bin header parser failed\n");
 				goto download_fail;
 			} else {
 				ts->fw_ver_bin[0] = fw_entry->data[FW_BIN_IC_ID];
@@ -1184,7 +1184,7 @@ int nvt_ts_fw_update_from_ums(struct nvt_ts_data *ts)
 				ts->fw_ver_bin[3] = fw_entry->data[FW_BIN_VER_OFFSET];
 				ts->fw_ver_bin_bar = fw_entry->data[FW_BIN_VER_BAR_OFFSET];
 
-				NVT_LOG("%s: fw_ver_bin = %02X%02X%02X%02X\n", __func__,
+				input_info(true, &ts->client->dev,"%s: fw_ver_bin = %02X%02X%02X%02X\n", __func__,
 					ts->fw_ver_bin[0], ts->fw_ver_bin[1], ts->fw_ver_bin[2], ts->fw_ver_bin[3]);
 //				break;
 			}
@@ -1192,7 +1192,7 @@ int nvt_ts_fw_update_from_ums(struct nvt_ts_data *ts)
 			/* initial buffer and variable */
 			ret = nvt_download_init();
 			if (ret) {
-				NVT_ERR("Download Init failed. (%d)\n", ret);
+				input_err(true, &ts->client->dev,"Download Init failed. (%d)\n", ret);
 				goto download_fail;
 			}
 
@@ -1202,17 +1202,17 @@ int nvt_ts_fw_update_from_ums(struct nvt_ts_data *ts)
 			else
 				ret = nvt_download_firmware();
 			if (ret) {
-				NVT_ERR("Download Firmware failed. (%d)\n", ret);
+				input_err(true, &ts->client->dev,"Download Firmware failed. (%d)\n", ret);
 				goto download_fail;
 			}
 
-			NVT_LOG("Update firmware success! <%ld us>\n",
+			input_info(true, &ts->client->dev,"Update firmware success! <%ld us>\n",
 					(end.tv_sec - start.tv_sec)*1000000L + (end.tv_usec - start.tv_usec));
 
 			/* Get FW Info */
 			ret = nvt_get_fw_info();
 			if (ret) {
-				NVT_ERR("nvt_get_fw_info failed. (%d)\n", ret);
+				input_err(true, &ts->client->dev,"nvt_get_fw_info failed. (%d)\n", ret);
 			}
 
 download_fail:
@@ -1252,7 +1252,7 @@ int nvt_ts_fw_update_from_mp_bin(struct nvt_ts_data *ts, bool is_start)
 	bool saveIsUMS;
 
 	if (is_start) {
-		NVT_LOG("isUMS = %s\n", ts->isUMS ? "true but load mp fw" : "false");
+		input_info(true, &ts->client->dev,"isUMS = %s\n", ts->isUMS ? "true but load mp fw" : "false");
 		saveIsUMS = ts->isUMS ? true : false;	//save isUMS status
 		ts->isUMS = false;
 		ret = nvt_update_firmware(MP_UPDATE_FIRMWARE_NAME);
@@ -1310,7 +1310,7 @@ void Boot_Update_Firmware(struct work_struct *work)
 
 			ret = nvt_sec_mp_parse_dt(ts, mpcriteria);
 			if (ret) {
-					NVT_ERR("%s: failed to parse mp device tree\n",
+					pr_err("%s: failed to parse mp device tree\n",
 							__func__);
 					//return ret;
 			}

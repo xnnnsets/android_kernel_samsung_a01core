@@ -995,6 +995,42 @@ static const struct attribute_group s2mu005_muic_group = {
 	.attrs = s2mu005_muic_attributes,
 };
 
+static int set_adc_mode_oneshot(struct s2mu005_muic_data *muic_data, bool oneshot)
+{
+	struct i2c_client *i2c = muic_data->i2c;
+	u8 reg_val;
+	int ret = 0;
+
+	ret = s2mu005_i2c_read_byte(i2c, S2MU005_REG_MUIC_CTRL3);
+	if (ret < 0)
+		pr_err("%s:%s: err read CTRL3(%d)\n", MUIC_DEV_NAME, __func__, ret);
+
+	if (oneshot)
+		reg_val = ret | (0x1 << CTRL_ONE_SHOT_SHIFT);
+	else
+		reg_val = ret & ~(0x1 << CTRL_ONE_SHOT_SHIFT);
+
+	if (reg_val ^ ret) {
+		pr_info("%s:%s: 0x%x != 0x%x, update\n", MUIC_DEV_NAME, __func__, reg_val, ret);
+
+		ret = s2mu005_i2c_write_byte(i2c, S2MU005_REG_MUIC_CTRL3, reg_val);
+		if (ret < 0)
+			pr_err("%s:%s: err write(%d)\n", MUIC_DEV_NAME, __func__, ret);
+	} else {
+		pr_info("%s:%s: 0x%x == 0x%x, just return\n",
+			MUIC_DEV_NAME, __func__, reg_val, ret);
+		return 0;
+	}
+
+	ret = s2mu005_i2c_read_byte(i2c, S2MU005_REG_MUIC_CTRL3);
+	if (ret < 0)
+		pr_err("%s:%s: err read CTRL(%d)\n", MUIC_DEV_NAME, __func__, ret);
+	else
+		pr_info("%s:%s: after change(0x%x)\n", MUIC_DEV_NAME, __func__, ret);
+
+	return ret;
+}
+
 static int set_ctrl_reg(struct s2mu005_muic_data *muic_data, int shift, bool on)
 {
 	struct i2c_client *i2c = muic_data->i2c;
@@ -1319,7 +1355,6 @@ static void s2mu005_muic_handle_attach(struct s2mu005_muic_data *muic_data,
 	case ATTACHED_DEV_CDP_MUIC:
 	case ATTACHED_DEV_JIG_USB_OFF_MUIC:
 	case ATTACHED_DEV_JIG_USB_ON_MUIC:
-	case ATTACHED_DEV_OTG_MUIC:
 	case ATTACHED_DEV_CHARGING_CABLE_MUIC:
 	case ATTACHED_DEV_TA_MUIC:
 	case ATTACHED_DEV_UNDEFINED_CHARGING_MUIC:
@@ -1339,6 +1374,11 @@ static void s2mu005_muic_handle_attach(struct s2mu005_muic_data *muic_data,
 #if IS_ENABLED(CONFIG_SEC_FACTORY) && IS_ENABLED(CONFIG_MUIC_S2MU005_DISCHARGING_WA)
 	case ATTACHED_DEV_CARKIT_MUIC:
 #endif
+		s2mu005_muic_handle_detach(muic_data);
+		break;
+	case ATTACHED_DEV_OTG_MUIC:
+		if (new_dev == ATTACHED_DEV_USB_LANHUB_MUIC)
+			break;
 		s2mu005_muic_handle_detach(muic_data);
 		break;
 	case ATTACHED_DEV_DESKDOCK_MUIC:
@@ -1363,6 +1403,12 @@ static void s2mu005_muic_handle_attach(struct s2mu005_muic_data *muic_data,
 	noti = true;
 #endif
 	switch (new_dev) {
+	case ATTACHED_DEV_OTG_MUIC:
+	case ATTACHED_DEV_USB_LANHUB_MUIC:
+		set_ctrl_reg(muic_data, CTRL_MANUAL_SW_SHIFT, false);
+		set_adc_mode_oneshot(muic_data, false);
+		ret = attach_usb(muic_data);
+		break;
 	case ATTACHED_DEV_USB_MUIC:
 	case ATTACHED_DEV_CDP_MUIC:
 #if IS_ENABLED(CONFIG_S2MU005_SUPPORT_BC1P2_CERTI)
@@ -1373,7 +1419,6 @@ static void s2mu005_muic_handle_attach(struct s2mu005_muic_data *muic_data,
 		*/
 		msleep(100);
 #endif
-	case ATTACHED_DEV_OTG_MUIC:
 #if IS_ENABLED(CONFIG_MUIC_S2MU005_SUPPORT_HMT)
 	case ATTACHED_DEV_HMT_MUIC:
 #endif
@@ -1497,6 +1542,13 @@ static void s2mu005_muic_handle_detach(struct s2mu005_muic_data *muic_data)
 #endif /* CONFIG_MUIC_NOTIFIER */
 
 out_without_noti:
+	if (muic_data->attached_dev == ATTACHED_DEV_OTG_MUIC ||
+			muic_data->attached_dev == ATTACHED_DEV_USB_LANHUB_MUIC) {
+#ifdef CONFIG_MUIC_S2MU005_ENABLE_AUTOSW
+		set_ctrl_reg(muic_data, CTRL_MANUAL_SW_SHIFT, true);
+#endif
+		set_adc_mode_oneshot(muic_data, true);
+	}
 	com_to_open(muic_data);
 	muic_data->attached_dev = ATTACHED_DEV_NONE_MUIC;
 }
@@ -1595,24 +1647,28 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 			pr_info("442K->523K JIG_USB_OFF DETECTED\n");
 		}
 		break;
+	case DEV_TYPE1_AUDIO_2:
+		new_dev = ATTACHED_DEV_USB_LANHUB_MUIC;
+		pr_info("%s:%s:LANHUB DETECTED DETECTED\n", MUIC_DEV_NAME, __func__);
+		break;
 	default:
 		break;
 	}
 
 	switch (devt2) {
 	case DEV_TYPE2_SDP_1P8S:
-		if (vbvolt) {
+		if (vbvolt && adc == ADC_OPEN) {
 			struct muic_platform_data *pdata = muic_data->pdata;
 
 			if (pdata->dcd_timeout) {
 				if (muic_data->usb_type_rechecked) {
 					muic_data->usb_type_rechecked = false;
 					new_dev = ATTACHED_DEV_TIMEOUT_OPEN_MUIC;
-		   		} else {
+				} else {
 					muic_data->usb_type_rechecked = true;
 					schedule_delayed_work(&muic_data->cable_recheck, 0);
 					return;
-		   		}
+				}
 			} else {
 				new_dev = ATTACHED_DEV_USB_MUIC;
 			}
@@ -1798,6 +1854,10 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 			new_dev = ATTACHED_DEV_HMT_MUIC;
 			break;
 #endif
+		case ADC_USB_LANHUB:
+			new_dev = ATTACHED_DEV_USB_LANHUB_MUIC;
+			pr_info("%s:%s: ADC LANHUB DETECTED\n", MUIC_DEV_NAME, __func__);
+			break;
 		case ADC_OPEN:
 			break;
 		default:

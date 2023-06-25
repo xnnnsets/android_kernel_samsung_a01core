@@ -255,8 +255,10 @@ static int muic_usb_handle_notification(struct notifier_block *nb,
 	case ATTACHED_DEV_USB_LANHUB_MUIC:
 		if (action == MUIC_NOTIFY_CMD_DETACH)
 			send_otg_notify(o_notify, NOTIFY_EVENT_LANHUB, 0);
-		else if (action == MUIC_NOTIFY_CMD_ATTACH)
+		else if (action == MUIC_NOTIFY_CMD_ATTACH) {
+			send_otg_notify(o_notify, NOTIFY_EVENT_DRIVE_VBUS, 0);
 			send_otg_notify(o_notify, NOTIFY_EVENT_LANHUB, 1);
+		}
 		else
 			pr_err("%s - ACTION Error!\n", __func__);
 		break;

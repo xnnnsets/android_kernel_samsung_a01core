@@ -128,6 +128,9 @@ extern VOID rlmCmd(P_GLUE_INFO_T prGlueInfo, UINT_8 *prInBuf, UINT_32 u4InBufLen
 /* wifi type: 11g, 11n, ... */
 #define  PRIV_CMD_GET_WIFI_TYPE			41
 
+/* fcc config */
+#define  PRIV_CMD_SET_FCC_CERT			42
+
 /* other string command ID */
 #define PRIV_CMD_OTHER_TDLS				0x00
 #define PRIV_CMD_OTHER_TAR				0x01 /* TX auto rate */

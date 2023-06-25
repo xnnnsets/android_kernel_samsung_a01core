@@ -3152,8 +3152,8 @@ _priv_set_struct(IN struct net_device *prNetDev,
 
 	u4SubCmd = (UINT_32) prIwReqData->data.flags;
 
-#if 0
-	DBGLOG(REQ, INFO, "priv_set_struct(): prIwReqInfo->cmd(0x%X), u4SubCmd(%ld)\n",
+#if 1
+	DBGLOG(REQ, INFO, "priv_set_struct(): prIwReqInfo->cmd(0x%X), u4SubCmd(%d)\n",
 		prIwReqInfo->cmd, u4SubCmd);
 #endif
 
@@ -3377,6 +3377,7 @@ _priv_set_struct(IN struct net_device *prNetDev,
 #endif
 
 	case PRIV_CMD_GET_WIFI_TYPE:
+	case PRIV_CMD_SET_FCC_CERT:
 		{
 			int32_t i4ResultLen;
 
@@ -4948,6 +4949,9 @@ INT_32 priv_driver_cmds(IN struct net_device *prNetDev, IN PCHAR pcCommand, IN I
 			P_FCC_TX_PWR_ADJUST pFccTxPwrAdjust = &prGlueInfo->rRegInfo.rFccTxPwrAdjust;
 			WLAN_STATUS rWlanStatus = WLAN_STATUS_FAILURE;
 
+			DBGLOG(RLM, INFO, "recv CMD_SET_FCC_CERT");
+
+			//pFccTxPwrAdjust->fgFccTxPwrAdjust = 1;
 			if (pFccTxPwrAdjust->fgFccTxPwrAdjust == 0)
 				DBGLOG(RLM, WARN,
 				       "FCC cert control(%d) is disabled in NVRAM\n",

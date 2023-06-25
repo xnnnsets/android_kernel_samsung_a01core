@@ -359,7 +359,7 @@ err_create_device:
 	kfree(pinfo);
 err_alloc_pinfo:
 err_parse_dt:
-	kfree(pdata);
+	devm_kfree(&pdev->dev, pdata);
 out:
 	return ret;
 }

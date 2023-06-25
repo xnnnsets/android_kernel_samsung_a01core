@@ -150,7 +150,7 @@ static int nvt_ts_set_touchable_area(struct nvt_ts_data *ts)
 	//---set xdata index to EVENT BUF ADDR---
 	ret = nvt_set_page(ts->mmap->EVENT_BUF_ADDR | EVENT_MAP_BLOCK_AREA);
 	if (ret < 0) {
-		NVT_ERR("%s: failed to set xdata index\n",
+		input_err(true, &ts->client->dev,"%s: failed to set xdata index\n",
 				__func__);
 		return ret;
 	}
@@ -167,7 +167,7 @@ static int nvt_ts_set_touchable_area(struct nvt_ts_data *ts)
 	data[8] = smart_view_area[3] >> 8;
 	ret = CTP_SPI_WRITE(ts->client, data, 9);
 	if (ret < 0) {
-		NVT_ERR("%s: failed to set area\n",
+		input_err(true, &ts->client->dev,"%s: failed to set area\n",
 				__func__);
 		return ret;
 	}
@@ -193,7 +193,7 @@ static int nvt_ts_set_untouchable_area(struct nvt_ts_data *ts)
 	data[2] = (ts->mmap->EVENT_BUF_ADDR>> 8) & 0xFF;
 	ret = nvt_ts_i2c_write(ts, I2C_FW_Address, data, 3);
 	if (ret < 0) {
-		NVT_ERR("%s: failed to set xdata index\n",
+		input_err(true, &ts->client->dev,"%s: failed to set xdata index\n",
 				__func__);
 		return ret;
 	}
@@ -210,7 +210,7 @@ static int nvt_ts_set_untouchable_area(struct nvt_ts_data *ts)
 	data[8] = touchable_area[3] >> 8;
 	ret = nvt_ts_i2c_write(ts, I2C_FW_Address, data, 9);
 	if (ret < 0) {
-		NVT_ERR("%s: failed to set area\n",
+		input_err(true, &ts->client->dev,"%s: failed to set area\n",
 				__func__);
 		return ret;
 	}
@@ -229,7 +229,7 @@ static int nvt_ts_disable_block_mode(struct nvt_ts_data *ts)
 	data[2] = (ts->mmap->EVENT_BUF_ADDR >> 8) & 0xFF;
 	ret = nvt_ts_i2c_write(ts, I2C_FW_Address, data, 3);
 	if (ret < 0) {
-		NVT_ERR("%s: failed to set xdata index\n",
+		input_err(true, &ts->client->dev,"%s: failed to set xdata index\n",
 				__func__);
 		return ret;
 	}
@@ -246,7 +246,7 @@ static int nvt_ts_disable_block_mode(struct nvt_ts_data *ts)
 	data[8] = 1;
 	ret = nvt_ts_i2c_write(ts, I2C_FW_Address, data, 9);
 	if (ret < 0) {
-		NVT_ERR("%s: failed to set area\n",
+		input_err(true, &ts->client->dev,"%s: failed to set area\n",
 				__func__);
 		return ret;
 	}
@@ -282,7 +282,7 @@ static int nvt_ts_clear_fw_status(struct nvt_ts_data *ts)
 	}
 
 	if (i >= retry) {
-		NVT_ERR("failed, i=%d, buf[1]=0x%02X\n", i, buf[1]);
+		input_err(true, &ts->client->dev,"failed, i=%d, buf[1]=0x%02X\n", i, buf[1]);
 		return -1;
 	} else {
 		return 0;
@@ -311,7 +311,7 @@ static int nvt_ts_check_fw_status(struct nvt_ts_data *ts)
 	}
 
 	if (i >= retry) {
-		NVT_ERR("failed, i=%d, buf[1]=0x%02X\n", i, buf[1]);
+		input_err(true, &ts->client->dev,"failed, i=%d, buf[1]=0x%02X\n", i, buf[1]);
 		return -1;
 	} else {
 		return 0;
@@ -338,7 +338,7 @@ static void nvt_ts_read_mdata(struct nvt_ts_data *ts, int *buff, u32 xdata_addr,
 	data_len = ts->platdata->x_num * ts->platdata->y_num * 2;
 	residual_len = (head_addr + dummy_len + data_len) % XDATA_SECTOR_SIZE;
 
-	NVT_LOG("head_addr=0x%05X, dummy_len=0x%05X, data_len=0x%05X, residual_len=0x%05X\n", head_addr, dummy_len, data_len, residual_len);
+	input_info(true, &ts->client->dev,"head_addr=0x%05X, dummy_len=0x%05X, data_len=0x%05X, residual_len=0x%05X\n", head_addr, dummy_len, data_len, residual_len);
 
 	//read data : step 1
 	for (i = 0; i < ((dummy_len + data_len) / XDATA_SECTOR_SIZE); i++) {
@@ -422,7 +422,7 @@ static u8 nvt_ts_get_fw_pipe(struct nvt_ts_data *ts)
 	buf[1] = 0x00;
 	CTP_SPI_READ(ts->client, buf, 2);
 
-	//NVT_LOG("FW pipe=%d, buf[1]=0x%02X\n", (buf[1]&0x01), buf[1]);
+	//input_info(true, &ts->client->dev,"FW pipe=%d, buf[1]=0x%02X\n", (buf[1]&0x01), buf[1]);
 
 	return (buf[1] & 0x01);
 }
@@ -449,7 +449,7 @@ static int nvt_ts_hand_shake_status(struct nvt_ts_data *ts)
 	}
 
 	if (i >= retry) {
-		NVT_ERR("%s: failed to hand shake status, buf[1]=0x%02X\n",
+		input_err(true, &ts->client->dev,"%s: failed to hand shake status, buf[1]=0x%02X\n",
 			__func__, buf[1]);
 
 		// Read back 5 bytes from offset EVENT_MAP_HOST_CMD for debug check
@@ -462,7 +462,7 @@ static int nvt_ts_hand_shake_status(struct nvt_ts_data *ts)
 		buf[4] = 0x00;
 		buf[5] = 0x00;
 		CTP_SPI_READ(ts->client, buf, 6);
-		NVT_ERR("%s: read back 5 bytes from offset EVENT_MAP_HOST_CMD: "
+		input_err(true, &ts->client->dev,"%s: read back 5 bytes from offset EVENT_MAP_HOST_CMD: "
 			"0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X\n",
 			__func__, buf[1], buf[2], buf[3], buf[4], buf[5]);
 
@@ -496,7 +496,7 @@ static int nvt_ts_switch_freqhops(struct nvt_ts_data *ts, u8 freqhop)
 	}
 
 	if (unlikely(retry == 20)) {
-		NVT_ERR("%s: failed to switch freq hop 0x%02X, buf[1]=0x%02X\n",
+		input_err(true, &ts->client->dev,"%s: failed to switch freq hop 0x%02X, buf[1]=0x%02X\n",
 			__func__, freqhop, buf[1]);
 		return -EPERM;
 	}
@@ -524,7 +524,7 @@ static void nvt_ts_print_buff(struct nvt_ts_data *ts, int *buff, int *min, int *
 		strlcat(pStr, pTmp, lsize);
 	}
 
-	NVT_LOG("%s\n", pStr);
+	input_info(true, &ts->client->dev,"%s\n", pStr);
 	memset(pStr, 0x0, lsize);
 	snprintf(pTmp, sizeof(pTmp), " +");
 	strlcat(pStr, pTmp, lsize);
@@ -534,7 +534,7 @@ static void nvt_ts_print_buff(struct nvt_ts_data *ts, int *buff, int *min, int *
 		strlcat(pStr, pTmp, lsize);
 	}
 
-	NVT_LOG("%s\n", pStr);
+	input_info(true, &ts->client->dev,"%s\n", pStr);
 
 	for (i = 0; i < ts->platdata->y_num; i++) {
 		memset(pStr, 0x0, lsize);
@@ -552,7 +552,7 @@ static void nvt_ts_print_buff(struct nvt_ts_data *ts, int *buff, int *min, int *
 			strlcat(pStr, pTmp, lsize);
 		}
 
-		NVT_LOG("%s\n", pStr);
+		input_info(true, &ts->client->dev,"%s\n", pStr);
 	}
 
 	kfree(pStr);
@@ -578,7 +578,7 @@ static void nvt_ts_print_gap_buff(struct nvt_ts_data *ts, int *buff, int *min, i
 		strlcat(pStr, pTmp, lsize);
 	}
 
-	NVT_LOG("%s\n", pStr);
+	input_info(true, &ts->client->dev,"%s\n", pStr);
 	memset(pStr, 0x0, lsize);
 	snprintf(pTmp, sizeof(pTmp), " +");
 	strlcat(pStr, pTmp, lsize);
@@ -588,7 +588,7 @@ static void nvt_ts_print_gap_buff(struct nvt_ts_data *ts, int *buff, int *min, i
 		strlcat(pStr, pTmp, lsize);
 	}
 
-	NVT_LOG("%s\n", pStr);
+	input_info(true, &ts->client->dev,"%s\n", pStr);
 
 	for (i = 0; i < ts->platdata->y_num; i++) {
 		memset(pStr, 0x0, lsize);
@@ -606,7 +606,7 @@ static void nvt_ts_print_gap_buff(struct nvt_ts_data *ts, int *buff, int *min, i
 			strlcat(pStr, pTmp, lsize);
 		}
 
-		NVT_LOG("%s\n", pStr);
+		input_info(true, &ts->client->dev,"%s\n", pStr);
 	}
 
 	kfree(pStr);
@@ -644,7 +644,7 @@ static int nvt_ts_noise_read(struct nvt_ts_data *ts, int *min_buff, int *max_buf
 	if (frame_num <= 0)
 		frame_num = 1;
 
-	NVT_LOG("%s: frame_num %d\n", __func__, frame_num);
+	input_info(true, &ts->client->dev,"%s: frame_num %d\n", __func__, frame_num);
 
 	//---set xdata index to EVENT BUF ADDR---
 	nvt_set_page(ts->mmap->EVENT_BUF_ADDR | EVENT_MAP_HOST_CMD);
@@ -686,7 +686,7 @@ static int nvt_ts_noise_read(struct nvt_ts_data *ts, int *min_buff, int *max_buf
 	//---Leave Test Mode---
 	nvt_ts_change_mode(ts, NORMAL_MODE);
 
-	NVT_LOG("%s\n", __func__);
+	input_info(true, &ts->client->dev,"%s\n", __func__);
 
 	return 0;
 }
@@ -737,7 +737,7 @@ static int nvt_ts_ccdata_read(struct nvt_ts_data *ts, int *buff)
 	//---Leave Test Mode---
 	nvt_ts_change_mode(ts, NORMAL_MODE);
 
-	NVT_LOG("%s\n", __func__);
+	input_info(true, &ts->client->dev,"%s\n", __func__);
 
 	return 0;
 }
@@ -785,7 +785,7 @@ static int nvt_ts_rawdata_read(struct nvt_ts_data *ts, int *buff)
 	//---Leave Test Mode---
 	nvt_ts_change_mode(ts, NORMAL_MODE);
 
-	NVT_LOG("%s\n", __func__);
+	input_info(true, &ts->client->dev,"%s\n", __func__);
 
 	return 0;
 }
@@ -866,7 +866,7 @@ static int nvt_ts_short_read(struct nvt_ts_data *ts, int *buff)
 	//---Leave Test Mode---
 	nvt_ts_change_mode(ts, NORMAL_MODE);
 
-	NVT_LOG("%s: Raw_Data_Short\n", __func__);
+	input_info(true, &ts->client->dev,"%s: Raw_Data_Short\n", __func__);
 
 	return 0;
 }
@@ -947,7 +947,7 @@ static int nvt_ts_open_read(struct nvt_ts_data *ts, int *buff)
 	//---Leave Test Mode---
 	nvt_ts_change_mode(ts, NORMAL_MODE);
 
-	NVT_LOG("%s\n", __func__);
+	input_info(true, &ts->client->dev,"%s\n", __func__);
 
 	return 0;
 }
@@ -977,7 +977,7 @@ static int nvt_ts_open_test(struct nvt_ts_data *ts)
 	if (max > (int)ts->platdata->open_test_spec[1])
 		ret = -EPERM;
 
-	NVT_LOG("%s: min(%d,%d), max(%d,%d)",
+	input_info(true, &ts->client->dev,"%s: min(%d,%d), max(%d,%d)",
 		__func__, min, ts->platdata->open_test_spec[0],
 		max, ts->platdata->open_test_spec[1]);
 out:
@@ -1014,7 +1014,7 @@ static int nvt_ts_short_test(struct nvt_ts_data *ts)
 	if (max > (int)ts->platdata->short_test_spec[1])
 		ret = -EPERM;
 
-	NVT_LOG("%s: min(%d,%d), max(%d,%d)",
+	input_info(true, &ts->client->dev,"%s: min(%d,%d), max(%d,%d)",
 		__func__, min, ts->platdata->short_test_spec[0],
 		max, ts->platdata->short_test_spec[1]);
 out:
@@ -1081,7 +1081,7 @@ static int nvt_ts_nt36523_sram_test(struct nvt_ts_data *ts)
 		nvt_ts_i2c_read(ts, I2C_FW_Address, buf, 2);
 
 		if (buf[1] != 0x02) {
-			NVT_LOG("%s: ICM WRITE fail at pattern=0x%02X, MBT_STATUS=0x%02X\n", 
+			input_info(true, &ts->client->dev,"%s: ICM WRITE fail at pattern=0x%02X, MBT_STATUS=0x%02X\n", 
 				__func__, test_pattern[i], buf[1]);
 			ret = TEST_RESULT_FAIL;
 		}
@@ -1104,7 +1104,7 @@ static int nvt_ts_nt36523_sram_test(struct nvt_ts_data *ts)
 		nvt_ts_i2c_read(ts, I2C_FW_Address, buf, 2);
 
 		if (buf[1] != 0x02) {
-			NVT_LOG("%s: ICM READ fail at pattern=0x%02X, MBT_STATUS=0x%02X\n", 
+			input_info(true, &ts->client->dev,"%s: ICM READ fail at pattern=0x%02X, MBT_STATUS=0x%02X\n", 
 				__func__, test_pattern[i], buf[1]);
 			ret = TEST_RESULT_FAIL;
 		}	
@@ -1165,7 +1165,7 @@ static int nvt_ts_nt36523_sram_test(struct nvt_ts_data *ts)
 		nvt_ts_nt36523_ics_i2c_read(ts, ts->mmap->MBT_STATUS, buf, 2);
 
 		if (buf[1] != 0x02) {			
-			NVT_LOG("%s: ICS WRITE fail at pattern=0x%02X, MBT_STATUS=0x%02X\n", 
+			input_info(true, &ts->client->dev,"%s: ICS WRITE fail at pattern=0x%02X, MBT_STATUS=0x%02X\n", 
 				__func__, test_pattern[i], buf[1]);
 			ret = TEST_RESULT_FAIL;
 		}
@@ -1188,14 +1188,14 @@ static int nvt_ts_nt36523_sram_test(struct nvt_ts_data *ts)
 		nvt_ts_nt36523_ics_i2c_read(ts, ts->mmap->MBT_STATUS, buf, 2);
 
 		if (buf[1] != 0x02) {
-			NVT_LOG("%s: ICS READ fail at pattern=0x%02X, MBT_STATUS=0x%02X\n", 
+			input_info(true, &ts->client->dev,"%s: ICS READ fail at pattern=0x%02X, MBT_STATUS=0x%02X\n", 
 				__func__, test_pattern[i], buf[1]);
 			ret = TEST_RESULT_FAIL;
 		}	
 	}
 
 	if (ret == TEST_RESULT_PASS)
-		NVT_LOG("%s: pass.\n", __func__);
+		input_info(true, &ts->client->dev,"%s: pass.\n", __func__);
 
 	//---Reset IC---
 	//nvt_bootloader_reset();
@@ -1246,7 +1246,7 @@ static int nvt_ts_mode_switch(struct nvt_ts_data *ts, u8 cmd, bool stored)
 	}
 
 	if (unlikely(i == retry)) {
-		NVT_ERR("failed to switch 0x%02X mode - 0x%02X\n", cmd, buf[1]);
+		input_err(true, &ts->client->dev,"failed to switch 0x%02X mode - 0x%02X\n", cmd, buf[1]);
 		return -EIO;
 	}
 
@@ -1354,7 +1354,7 @@ int nvt_ts_mode_restore(struct nvt_ts_data *ts)
 
 			ret = nvt_ts_mode_switch(ts, cmd, false);
 			if (ret)
-				NVT_LOG("%s: failed to restore %X\n", __func__, cmd);
+				input_info(true, &ts->client->dev,"%s: failed to restore %X\n", __func__, cmd);
 		}
 	}
 out:
@@ -1388,12 +1388,12 @@ static void fw_update(void *device_data)
 	case UMS:
 		ret = nvt_ts_fw_update_from_ums(ts);
 		if(!ret) {
-			NVT_LOG("%s: isUMS\n", __func__);
+			input_info(true, &ts->client->dev,"%s: isUMS\n", __func__);
 			ts->isUMS = true;
 		}
 		break;
 	default:
-		NVT_ERR("%s: Not support command[%d]\n",
+		input_err(true, &ts->client->dev,"%s: Not support command[%d]\n",
 			__func__, sec->cmd_param[0]);
 		ret = -EINVAL;
 		break;
@@ -1410,7 +1410,7 @@ static void fw_update(void *device_data)
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 
 	return;
 
@@ -1436,7 +1436,7 @@ static void get_fw_ver_bin(void *device_data)
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "FW_VER_BIN");
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 
 static void get_fw_ver_ic(void *device_data)
@@ -1451,14 +1451,14 @@ static void get_fw_ver_ic(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out_power_off;
 	}
 
 	/* ic_name, project_id, panel, fw info */
 	ret = nvt_get_fw_info();
 	if (ret < 0) {
-		NVT_ERR("%s: nvt_ts_get_fw_info fail!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: nvt_ts_get_fw_info fail!\n", __func__);
 		goto out;
 	}
 	data[0] = ts->fw_ver_ic[0];
@@ -1477,7 +1477,7 @@ static void get_fw_ver_ic(void *device_data)
 		sec_cmd_set_cmd_result_all(sec, model, strnlen(model, sizeof(model)), "FW_MODEL");
 	}
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 
 	return;
 
@@ -1488,7 +1488,7 @@ out_power_off:
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 
 static void get_chip_vendor(void *device_data)
@@ -1506,7 +1506,7 @@ static void get_chip_vendor(void *device_data)
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "IC_VENDOR");
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 
 static void get_chip_name(void *device_data)
@@ -1524,7 +1524,7 @@ static void get_chip_name(void *device_data)
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "IC_NAME");
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 #if SHOW_NOT_SUPPORT_CMD
 static void get_checksum_data(void *device_data)
@@ -1537,13 +1537,13 @@ static void get_checksum_data(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
 	// get firmware data checksum in flash ic 
 	if (nvt_get_checksum(ts, csum_result, sizeof(csum_result))) {
-		NVT_ERR("%s: nvt_ts_get_checksum fail!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: nvt_ts_get_checksum fail!\n", __func__);
 		goto err;
 	}
 
@@ -1553,7 +1553,7 @@ static void get_checksum_data(void *device_data)
 	sec->cmd_state = SEC_CMD_STATUS_OK;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 
 	return;
 
@@ -1564,7 +1564,7 @@ out:
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 #endif
 static void get_threshold(void *device_data)
@@ -1579,7 +1579,7 @@ static void get_threshold(void *device_data)
 	sec->cmd_state = SEC_CMD_STATUS_OK;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 
 static void check_connection(void *device_data)
@@ -1592,12 +1592,12 @@ static void check_connection(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -1617,7 +1617,7 @@ static void check_connection(void *device_data)
 	sec->cmd_state =  ret ? SEC_CMD_STATUS_FAIL : SEC_CMD_STATUS_OK;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 
 	return;
 
@@ -1626,7 +1626,7 @@ out:
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 
 static void glove_mode(void *device_data)
@@ -1640,12 +1640,12 @@ static void glove_mode(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1) {
-		NVT_ERR("%s: invalid parameter %d\n",
+		input_err(true, &ts->client->dev,"%s: invalid parameter %d\n",
 			__func__, sec->cmd_param[0]);
 		goto out;
 	} else {
@@ -1653,7 +1653,7 @@ static void glove_mode(void *device_data)
 	}
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -1671,7 +1671,7 @@ static void glove_mode(void *device_data)
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 
 	return;
 out:
@@ -1680,7 +1680,7 @@ out:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 
 #ifdef PROXIMITY_FUNCTION
@@ -1695,12 +1695,12 @@ static void ear_detect_enable(void *device_data)
 	sec_cmd_set_default_result(sec);
 #if 0
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 #endif
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1) {
-		NVT_ERR("%s: invalid parameter %d\n",
+		input_err(true, &ts->client->dev,"%s: invalid parameter %d\n",
 			__func__, sec->cmd_param[0]);
 		goto out;
 	} else {
@@ -1709,7 +1709,7 @@ static void ear_detect_enable(void *device_data)
 	}
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -1727,7 +1727,7 @@ static void ear_detect_enable(void *device_data)
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s,%d: %s\n", __func__, sec->cmd_param[0], buff);
+	input_info(true, &ts->client->dev,"%s,%d: %s\n", __func__, sec->cmd_param[0], buff);
 
 	return;
 out:
@@ -1736,7 +1736,7 @@ out:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s,%d: %s\n", __func__, sec->cmd_param[0], buff);
+	input_info(true, &ts->client->dev,"%s,%d: %s\n", __func__, sec->cmd_param[0], buff);
 }
 #endif
 
@@ -1752,12 +1752,12 @@ static void dead_zone_enable(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1) {
-		NVT_ERR("%s: invalid parameter %d\n",
+		input_err(true, &ts->client->dev,"%s: invalid parameter %d\n",
 			__func__, sec->cmd_param[0]);
 		goto out;
 	} else {
@@ -1765,7 +1765,7 @@ static void dead_zone_enable(void *device_data)
 	}
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -1783,7 +1783,7 @@ static void dead_zone_enable(void *device_data)
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 
 	return;
 out:
@@ -1792,7 +1792,7 @@ out:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 
 static void spay_enable(void *device_data)
@@ -1806,7 +1806,7 @@ static void spay_enable(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1) {
-		NVT_ERR("%s: invalid parameter %d\n",
+		input_err(true, &ts->client->dev,"%s: invalid parameter %d\n",
 			__func__, sec->cmd_param[0]);
 		goto out;
 	} else {
@@ -1814,7 +1814,7 @@ static void spay_enable(void *device_data)
 	}
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -1832,7 +1832,7 @@ static void spay_enable(void *device_data)
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 
 	return;
 out:
@@ -1841,7 +1841,7 @@ out:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 
 static void aot_enable(void *device_data)
@@ -1855,7 +1855,7 @@ static void aot_enable(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1) {
-		NVT_ERR("%s: invalid parameter %d\n",
+		input_err(true, &ts->client->dev,"%s: invalid parameter %d\n",
 			__func__, sec->cmd_param[0]);
 		goto out;
 	} else {
@@ -1863,7 +1863,7 @@ static void aot_enable(void *device_data)
 	}
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -1881,7 +1881,7 @@ static void aot_enable(void *device_data)
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 
 	return;
 out:
@@ -1890,7 +1890,7 @@ out:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 
 static void set_touchable_area(void *device_data)
@@ -1904,12 +1904,12 @@ static void set_touchable_area(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1) {
-		NVT_ERR("%s: invalid parameter %d\n",
+		input_err(true, &ts->client->dev,"%s: invalid parameter %d\n",
 			__func__, sec->cmd_param[0]);
 		goto out;
 	} else {
@@ -1917,7 +1917,7 @@ static void set_touchable_area(void *device_data)
 	}
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -1932,7 +1932,7 @@ static void set_touchable_area(void *device_data)
 			goto err;
 	}
 
-	NVT_LOG("%s: %02X(%d)\n", __func__, mode, ts->untouchable_area);
+	input_info(true, &ts->client->dev,"%s: %02X(%d)\n", __func__, mode, ts->untouchable_area);
 
 	ret = nvt_ts_mode_switch(ts, mode, true);
 	if (ret)
@@ -1947,7 +1947,7 @@ static void set_touchable_area(void *device_data)
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 
 	return;
 err:
@@ -1960,7 +1960,7 @@ out:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 
 static void set_untouchable_area_rect(void *device_data)
@@ -1974,7 +1974,7 @@ static void set_untouchable_area_rect(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
@@ -1991,17 +1991,17 @@ static void set_untouchable_area_rect(void *device_data)
 	if (sec->cmd_param[3] == DEFAULT_MAX_HEIGHT)
 		landscape_deadzone[1] = sec->cmd_param[3] - sec->cmd_param[1];
 
-	NVT_LOG("%s: %d,%d %d,%d %d,%d\n", __func__,
+	input_info(true, &ts->client->dev,"%s: %d,%d %d,%d %d,%d\n", __func__,
 		sec->cmd_param[0], sec->cmd_param[1], sec->cmd_param[2], sec->cmd_param[3],
 		landscape_deadzone[0], landscape_deadzone[1]);
 
 	if (ts->touchable_area) {
-		NVT_ERR("%s: set_touchable_area is enabled\n", __func__);
+		input_err(true, &ts->client->dev,"%s: set_touchable_area is enabled\n", __func__);
 		goto out_for_touchable;
 	}
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -2025,7 +2025,7 @@ static void set_untouchable_area_rect(void *device_data)
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 
 	return;
 err:
@@ -2038,7 +2038,7 @@ out_for_touchable:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 
 /*
@@ -2058,7 +2058,7 @@ static void nvt_ts_set_grip_exception_zone(struct sec_cmd_data *sec)
 
 	switch (sec->cmd_param[1]) {
 		case 0:	//disable
-			NVT_LOG("%s: disable\n", __func__);
+			input_info(true, &ts->client->dev,"%s: disable\n", __func__);
 			buf[0] = EVENT_MAP_HOST_CMD;
 			buf[1] = EXTENDED_CUSTOMIZED_CMD;
 			buf[2] = SET_GRIP_EXECPTION_ZONE;
@@ -2070,13 +2070,13 @@ static void nvt_ts_set_grip_exception_zone(struct sec_cmd_data *sec)
 			nvt_ts_i2c_write(ts, I2C_FW_Address, buf, 8);
 			goto out;
 		case 1:	//enable left
-			NVT_LOG("%s: enable left side\n", __func__);
+			input_info(true, &ts->client->dev,"%s: enable left side\n", __func__);
 			break;
 		case 2: //enable right
-			NVT_LOG("%s: enable right side\n", __func__);
+			input_info(true, &ts->client->dev,"%s: enable right side\n", __func__);
 			break;
 		default:
-			NVT_ERR("%s: not support parameter, cmd_param[1]=0x02X\n", __func__, sec->cmd_param[1]);
+			input_err(true, &ts->client->dev,"%s: not support parameter, cmd_param[1]=0x02X\n", __func__, sec->cmd_param[1]);
 			goto err;
 	}
 
@@ -2112,7 +2112,7 @@ static void nvt_ts_set_grip_portrait_mode(struct sec_cmd_data *sec)
 	struct nvt_ts_data *ts = container_of(sec, struct nvt_ts_data, sec);
 	u8 buf[8];
 
-	NVT_LOG("%s: set portrait mode parameters\n", __func__);
+	input_info(true, &ts->client->dev,"%s: set portrait mode parameters\n", __func__);
 
 	buf[0] = EVENT_MAP_HOST_CMD;
 	buf[1] = EXTENDED_CUSTOMIZED_CMD;
@@ -2151,7 +2151,7 @@ static void nvt_ts_set_grip_landscape_mode(struct sec_cmd_data *sec)
 
 	switch (sec->cmd_param[1]) {
 		case 0: //use previous portrait setting
-			NVT_LOG("%s: use previous portrait settings\n", __func__);
+			input_info(true, &ts->client->dev,"%s: use previous portrait settings\n", __func__);
 			buf[0] = EVENT_MAP_HOST_CMD;
 			buf[1] = EXTENDED_CUSTOMIZED_CMD;
 			buf[2] = SET_GRIP_LANDSCAPE_MODE;
@@ -2159,7 +2159,7 @@ static void nvt_ts_set_grip_landscape_mode(struct sec_cmd_data *sec)
 			nvt_ts_i2c_write(ts, I2C_FW_Address, buf, 4);
 			goto out;
 		case 1: //enable landscape mode
-			NVT_LOG("%s: set landscape mode parameters\n", __func__);			
+			input_info(true, &ts->client->dev,"%s: set landscape mode parameters\n", __func__);			
 			buf[0] = EVENT_MAP_HOST_CMD;
 			buf[1] = EXTENDED_CUSTOMIZED_CMD;
 			buf[2] = SET_GRIP_LANDSCAPE_MODE;
@@ -2173,7 +2173,7 @@ static void nvt_ts_set_grip_landscape_mode(struct sec_cmd_data *sec)
 			nvt_ts_i2c_write(ts, I2C_FW_Address, buf, 10);
 			goto out;
 		default:
-			NVT_ERR("%s: not support parameter, cmd_param[1]=0x02X\n", __func__, sec->cmd_param[1]);
+			input_err(true, &ts->client->dev,"%s: not support parameter, cmd_param[1]=0x02X\n", __func__, sec->cmd_param[1]);
 			goto err;
 	}
 
@@ -2198,36 +2198,36 @@ static void set_grip_data(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
 
 	// print parameters (debug use)
-	NVT_LOG("%s: 0x%X, 0x%X, 0x%X, 0x%X, 0x%X, 0x%X, 0x%X, 0x%X\n", 
+	input_info(true, &ts->client->dev,"%s: 0x%X, 0x%X, 0x%X, 0x%X, 0x%X, 0x%X, 0x%X, 0x%X\n", 
 		__func__, sec->cmd_param[0], sec->cmd_param[1], sec->cmd_param[2], sec->cmd_param[3],
 		sec->cmd_param[4], sec->cmd_param[5], sec->cmd_param[6], sec->cmd_param[7]);
 
 	switch (sec->cmd_param[0]) {
 		case 0:
-			NVT_LOG("%s: EDGE_GRIP_EXCEPTION_ZONE\n", __func__);
+			input_info(true, &ts->client->dev,"%s: EDGE_GRIP_EXCEPTION_ZONE\n", __func__);
 			nvt_ts_set_grip_exception_zone(sec);
 			break;
 		case 1:
-			NVT_LOG("%s: PORTRAIT_MODE\n", __func__);
+			input_info(true, &ts->client->dev,"%s: PORTRAIT_MODE\n", __func__);
 			nvt_ts_set_grip_portrait_mode(sec);
 			break;
 		case 2:
-			NVT_LOG("%s: LANDSCAPE_MODE\n", __func__);
+			input_info(true, &ts->client->dev,"%s: LANDSCAPE_MODE\n", __func__);
 			nvt_ts_set_grip_landscape_mode(sec);
 			break;
 		default:
-			NVT_ERR("%s: not support mode, cmd_param[0]=0x02X\n", __func__, sec->cmd_param[0]);
+			input_err(true, &ts->client->dev,"%s: not support mode, cmd_param[0]=0x02X\n", __func__, sec->cmd_param[0]);
 			goto err;
 	}
 
@@ -2238,7 +2238,7 @@ static void set_grip_data(void *device_data)
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 
 	return;
 err:
@@ -2249,7 +2249,7 @@ out:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 
 static void lcd_orientation(void *device_data)
@@ -2263,43 +2263,43 @@ static void lcd_orientation(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
 	if (sec->cmd_param[0] < 0 && sec->cmd_param[0] > 3) {
-		NVT_ERR("%s: invalid parameter %d\n",
+		input_err(true, &ts->client->dev,"%s: invalid parameter %d\n",
 			__func__, sec->cmd_param[0]);
 		goto out;
 	} else {
 		switch (sec->cmd_param[0]) {
 		case ORIENTATION_0:
 			mode = EDGE_REJ_VERTICLE_MODE;
-			NVT_LOG("%s: Get 0 degree LCD orientation.\n", __func__);
+			input_info(true, &ts->client->dev,"%s: Get 0 degree LCD orientation.\n", __func__);
 			break;
 		case ORIENTATION_90:
 			mode = EDGE_REJ_RIGHT_UP_MODE;
-			NVT_LOG("%s: Get 90 degree LCD orientation.\n", __func__);
+			input_info(true, &ts->client->dev,"%s: Get 90 degree LCD orientation.\n", __func__);
 			break;
 		case ORIENTATION_180:
 			mode = EDGE_REJ_VERTICLE_MODE;
-			NVT_LOG("%s: Get 180 degree LCD orientation.\n", __func__);
+			input_info(true, &ts->client->dev,"%s: Get 180 degree LCD orientation.\n", __func__);
 			break;
 		case ORIENTATION_270:
 			mode = EDGE_REJ_LEFT_UP_MODE;
-			NVT_LOG("%s: Get 270 degree LCD orientation.\n", __func__);
+			input_info(true, &ts->client->dev,"%s: Get 270 degree LCD orientation.\n", __func__);
 			break;
 		default:
-			NVT_ERR("%s: LCD orientation value error.\n", __func__);
+			input_err(true, &ts->client->dev,"%s: LCD orientation value error.\n", __func__);
 			goto out;
 			break;
 		}
 	}
 
-	NVT_LOG("%s: %d,%02X\n", __func__, sec->cmd_param[0], mode);
+	input_info(true, &ts->client->dev,"%s: %d,%02X\n", __func__, sec->cmd_param[0], mode);
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -2317,7 +2317,7 @@ static void lcd_orientation(void *device_data)
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 
 	return;
 
@@ -2327,7 +2327,7 @@ out:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 #endif	// end of #if SHOW_NOT_SUPPORT_CMD
 
@@ -2344,12 +2344,12 @@ static void run_self_open_raw_read_all(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -2394,7 +2394,7 @@ static void run_self_open_raw_read_all(void *device_data)
 	kfree(buff);
 
 	snprintf(tmp, sizeof(tmp), "%s", "OK");
-	NVT_LOG("%s: %s", __func__, tmp);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, tmp);
 
 	return;
 
@@ -2411,7 +2411,7 @@ out:
 	sec_cmd_set_cmd_result(sec, tmp, strnlen(tmp, sizeof(tmp)));
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
 
-	NVT_LOG("%s: %s", __func__, tmp);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, tmp);
 }
 
 static void run_self_open_raw_read(void *device_data)
@@ -2425,7 +2425,7 @@ static void run_self_open_raw_read(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
@@ -2433,7 +2433,7 @@ static void run_self_open_raw_read(void *device_data)
 	max = 0x80000000;
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -2466,7 +2466,7 @@ static void run_self_open_raw_read(void *device_data)
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "OPEN_RAW");
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 
 	return;
 
@@ -2485,7 +2485,7 @@ out:
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "OPEN_RAW");
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 }
 
 static void run_self_open_uni_read_all(void *device_data)
@@ -2501,12 +2501,12 @@ static void run_self_open_uni_read_all(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -2560,7 +2560,7 @@ static void run_self_open_uni_read_all(void *device_data)
 	kfree(raw_buff);
 
 	snprintf(tmp, sizeof(tmp), "%s", "OK");
-	NVT_LOG("%s: %s", __func__, tmp);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, tmp);
 
 	return;
 err:
@@ -2575,7 +2575,7 @@ out:
 	sec_cmd_set_cmd_result(sec, tmp, strnlen(tmp, sizeof(tmp)));
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
 
-	NVT_LOG("%s: %s", __func__, tmp);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, tmp);
 }
 
 static void run_self_open_uni_read(void *device_data)
@@ -2591,7 +2591,7 @@ static void run_self_open_uni_read(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
@@ -2599,7 +2599,7 @@ static void run_self_open_uni_read(void *device_data)
 	max = 0x80000000;
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -2654,7 +2654,7 @@ static void run_self_open_uni_read(void *device_data)
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "OPEN_UNIFORMITY");
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 
 	return;
 err:
@@ -2673,7 +2673,7 @@ out:
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "OPEN_UNIFORMITY");
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 }
 
 static void run_self_short_read(void *device_data)
@@ -2687,7 +2687,7 @@ static void run_self_short_read(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
@@ -2695,7 +2695,7 @@ static void run_self_short_read(void *device_data)
 	max = 0x80000000;
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -2728,7 +2728,7 @@ static void run_self_short_read(void *device_data)
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "SHORT_TEST");
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 
 	return;
 err:
@@ -2746,7 +2746,7 @@ out:
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "SHORT_TEST");
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 }
 
 static void run_self_rawdata_read(void *device_data)
@@ -2760,7 +2760,7 @@ static void run_self_rawdata_read(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
@@ -2768,7 +2768,7 @@ static void run_self_rawdata_read(void *device_data)
 	max = 0x80000000;
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -2801,7 +2801,7 @@ static void run_self_rawdata_read(void *device_data)
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "FW_RAW_DATA");
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 
 	return;
 
@@ -2820,7 +2820,7 @@ out:
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "FW_RAW_DATA");
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 }
 
 static void run_self_ccdata_read_all(void *device_data)
@@ -2836,12 +2836,12 @@ static void run_self_ccdata_read_all(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -2886,7 +2886,7 @@ static void run_self_ccdata_read_all(void *device_data)
 	kfree(raw_buff);
 
 	snprintf(tmp, sizeof(tmp), "%s", "OK");
-	NVT_LOG("%s: %s", __func__, tmp);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, tmp);
 
 	return;
 
@@ -2902,7 +2902,7 @@ out:
 	sec_cmd_set_cmd_result(sec, tmp, strnlen(tmp, sizeof(tmp)));
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
 
-	NVT_LOG("%s: %s", __func__, tmp);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, tmp);
 }
 
 static void run_self_ccdata_read(void *device_data)
@@ -2916,7 +2916,7 @@ static void run_self_ccdata_read(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
@@ -2924,7 +2924,7 @@ static void run_self_ccdata_read(void *device_data)
 	max = 0x80000000;
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -2957,7 +2957,7 @@ static void run_self_ccdata_read(void *device_data)
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "FW_CC");
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 
 	return;
 
@@ -2976,7 +2976,7 @@ out:
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "FW_CC");
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 }
 
 static void run_self_noise_max_read(void *device_data)
@@ -2990,7 +2990,7 @@ static void run_self_noise_max_read(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
@@ -2998,7 +2998,7 @@ static void run_self_noise_max_read(void *device_data)
 	max = 0x80000000;
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -3033,7 +3033,7 @@ static void run_self_noise_max_read(void *device_data)
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "NOISE_MAX");
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 
 	return;
 
@@ -3056,7 +3056,7 @@ out:
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "NOISE_MAX");
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 }
 
 static void run_self_noise_min_read(void *device_data)
@@ -3070,7 +3070,7 @@ static void run_self_noise_min_read(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
@@ -3078,7 +3078,7 @@ static void run_self_noise_min_read(void *device_data)
 	max = 0x80000000;
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -3113,7 +3113,7 @@ static void run_self_noise_min_read(void *device_data)
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "NOISE_MIN");
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 
 	return;
 err:
@@ -3135,7 +3135,7 @@ out:
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "NOISE_MIN");
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 }
 
 static void factory_cmd_result_all(void *device_data)
@@ -3162,7 +3162,7 @@ static void factory_cmd_result_all(void *device_data)
 
 	sec->cmd_all_factory_state = SEC_CMD_STATUS_OK;
 
-	NVT_LOG("%s: %d%s\n", __func__, sec->item_count, sec->cmd_result_all);
+	input_info(true, &ts->client->dev,"%s: %d%s\n", __func__, sec->item_count, sec->cmd_result_all);
 }
 
 static void run_trx_short_test(void *device_data)
@@ -3182,18 +3182,18 @@ static void run_trx_short_test(void *device_data)
 		snprintf(test, sizeof(test), "TEST=%d", sec->cmd_param[0]);
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
 	if (sec->cmd_param[0] != OPEN_SHORT_TEST) {
-		NVT_ERR("%s: invalid parameter %d\n",
+		input_err(true, &ts->client->dev,"%s: invalid parameter %d\n",
 			__func__, sec->cmd_param[0]);
 		goto out;
 	}
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -3206,7 +3206,7 @@ static void run_trx_short_test(void *device_data)
 	} else if (sec->cmd_param[1] == CHECK_ONLY_SHORT_TEST) {
 		ret = nvt_ts_short_test(ts);
 	} else {
-		NVT_ERR("%s: invalid parameter option %d\n",
+		input_err(true, &ts->client->dev,"%s: invalid parameter option %d\n",
 			__func__, sec->cmd_param[1]);
 		goto out;
 	}
@@ -3240,7 +3240,7 @@ out:
 	snprintf(result, sizeof(result), "RESULT=FAIL");
 	sec_cmd_send_event_to_user(&ts->sec, test, result);
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 }
 
 #if SHOW_NOT_SUPPORT_CMD
@@ -3257,12 +3257,12 @@ static void run_sram_test(void *device_data)
 	snprintf(test, sizeof(test), "SRAM TEST");
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		goto out;
 	}
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		goto out;
 	}
@@ -3271,7 +3271,7 @@ static void run_sram_test(void *device_data)
 		if (nvt_ts_nt36523_sram_test(ts))	//nvt_ts_nt36523_sram_test supports only NT36523
 			goto err;
 	} else {
-		NVT_LOG("%s: not support SRAM test.\n", __func__);
+		input_info(true, &ts->client->dev,"%s: not support SRAM test.\n", __func__);
 		goto err;
 	}
 
@@ -3302,7 +3302,7 @@ out:
 	snprintf(result, sizeof(result), "RESULT=FAIL");
 	sec_cmd_send_event_to_user(&ts->sec, test, result);
 
-	NVT_LOG("%s: %s", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s", __func__, buff);
 }
 
 static void get_func_mode(void *device_data)
@@ -3319,7 +3319,7 @@ static void get_func_mode(void *device_data)
 	sec->cmd_state = SEC_CMD_STATUS_NOT_APPLICABLE;
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 #endif	// end of #if SHOW_NOT_SUPPORT_CMD
 
@@ -3351,7 +3351,7 @@ static void run_prox_intensity_read_all(void *device_data)
 	sec->cmd_state = SEC_CMD_STATUS_OK;
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: buff : %s sum : %d\n", __func__, buff, sum);
+	input_info(true, &ts->client->dev,"%s: buff : %s sum : %d\n", __func__, buff, sum);
 }
 
 static void not_support_cmd(void *device_data)
@@ -3368,7 +3368,7 @@ static void not_support_cmd(void *device_data)
 	sec->cmd_state = SEC_CMD_STATUS_NOT_APPLICABLE;
 	sec_cmd_set_cmd_exit(sec);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 }
 
 static struct sec_cmd sec_cmds[] = {
@@ -3420,7 +3420,7 @@ static ssize_t read_multi_count_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct nvt_ts_data *ts = container_of(sec, struct nvt_ts_data, sec);
 
-	NVT_LOG("%s: %d\n", __func__, ts->multi_count);
+	input_info(true, &ts->client->dev,"%s: %d\n", __func__, ts->multi_count);
 
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "%d", ts->multi_count);
 }
@@ -3434,7 +3434,7 @@ static ssize_t clear_multi_count_store(struct device *dev,
 
 	ts->multi_count = 0;
 
-	NVT_LOG("%s: clear\n", __func__);
+	input_info(true, &ts->client->dev,"%s: clear\n", __func__);
 
 	return count;
 }
@@ -3445,7 +3445,7 @@ static ssize_t read_comm_err_count_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct nvt_ts_data *ts = container_of(sec, struct nvt_ts_data, sec);
 
-	NVT_LOG("%s: %d\n", __func__, ts->comm_err_count);
+	input_info(true, &ts->client->dev,"%s: %d\n", __func__, ts->comm_err_count);
 
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "%d", ts->comm_err_count);
 }
@@ -3459,7 +3459,7 @@ static ssize_t clear_comm_err_count_store(struct device *dev,
 
 	ts->comm_err_count = 0;
 
-	NVT_LOG("%s: clear\n", __func__);
+	input_info(true, &ts->client->dev,"%s: clear\n", __func__);
 
 	return count;
 }
@@ -3474,7 +3474,7 @@ static ssize_t read_module_id_show(struct device *dev,
 	snprintf(buff, sizeof(buff), "NO%02X%02X%02X%02X",
 		ts->fw_ver_bin[0], ts->fw_ver_bin[1], ts->fw_ver_bin[2], ts->fw_ver_bin[3]);
 
-	NVT_LOG("%s: %s\n", __func__, buff);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buff);
 
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "%s", buff);
 }
@@ -3503,7 +3503,7 @@ static ssize_t read_vendor_show(struct device *dev,
 		kfree(str_orig);
 	}
 
-	NVT_LOG("%s: %s\n", __func__, buffer);
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__, buffer);
 err:
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "%s", buffer);
 }
@@ -3517,7 +3517,7 @@ static ssize_t clear_checksum_store(struct device *dev,
 
 	ts->checksum_result = 0;
 
-	NVT_LOG("%s: clear\n", __func__);
+	input_info(true, &ts->client->dev,"%s: clear\n", __func__);
 
 	return count;
 }
@@ -3528,7 +3528,7 @@ static ssize_t read_checksum_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct nvt_ts_data *ts = container_of(sec, struct nvt_ts_data, sec);
 
-	NVT_LOG("%s: %d\n", __func__, ts->checksum_result);
+	input_info(true, &ts->client->dev,"%s: %d\n", __func__, ts->checksum_result);
 
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "%d", ts->checksum_result);
 }
@@ -3539,7 +3539,7 @@ static ssize_t read_all_touch_count_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct nvt_ts_data *ts = container_of(sec, struct nvt_ts_data, sec);
 
-	NVT_LOG("%s: touch:%d\n", __func__, ts->all_finger_count);
+	input_info(true, &ts->client->dev,"%s: touch:%d\n", __func__, ts->all_finger_count);
 
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "\"TTCN\":\"%d\"", ts->all_finger_count);
 }
@@ -3553,7 +3553,7 @@ static ssize_t clear_all_touch_count_store(struct device *dev,
 
 	ts->all_finger_count = 0;
 
-	NVT_LOG("%s: clear\n", __func__);
+	input_info(true, &ts->client->dev,"%s: clear\n", __func__);
 
 	return count;
 }
@@ -3576,7 +3576,7 @@ static ssize_t sensitivity_mode_show(struct device *dev, struct device_attribute
 	data[0] = EVENT_MAP_SENSITIVITY_DIFF;
 	ret = CTP_SPI_READ(ts->client, data, 19);
 	if (ret < 0) {
-		NVT_ERR("%s: failed to read sensitivity",
+		input_err(true, &ts->client->dev,"%s: failed to read sensitivity",
 			__func__);
 	}
 
@@ -3601,28 +3601,28 @@ static ssize_t sensitivity_mode_store(struct device *dev, struct device_attribut
 	u8 mode;
 
 	if (count > 2) {
-		NVT_ERR("%s: invalid parameter\n", __func__);
+		input_err(true, &ts->client->dev,"%s: invalid parameter\n", __func__);
 		return count;
 	}
 
 	ret = kstrtoul(buf, 10, &val);
 	if (ret) {
-		NVT_ERR("%s: failed to get param\n", __func__);
+		input_err(true, &ts->client->dev,"%s: failed to get param\n", __func__);
 		return count;
 	}
 
 	if (ts->power_status == POWER_OFF_STATUS) {
-		NVT_ERR("%s: POWER_STATUS : OFF!\n", __func__);
+		input_err(true, &ts->client->dev,"%s: POWER_STATUS : OFF!\n", __func__);
 		return count;
 	}
 
-	NVT_LOG("%s: %s\n", __func__,
+	input_info(true, &ts->client->dev,"%s: %s\n", __func__,
 			val ? "enable" : "disable");
 
 	mode = val ? SENSITIVITY_ENTER: SENSITIVITY_LEAVE;
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		NVT_ERR("%s: another task is running\n",
+		input_err(true, &ts->client->dev,"%s: another task is running\n",
 			__func__);
 		return count;
 	}
@@ -3631,7 +3631,7 @@ static ssize_t sensitivity_mode_store(struct device *dev, struct device_attribut
 
 	mutex_unlock(&ts->lock);
 
-	NVT_LOG("%s: %s %s\n", __func__,
+	input_info(true, &ts->client->dev,"%s: %s %s\n", __func__,
 			val ? "enable" : "disabled", ret ? "fail" : "done");
 
 	return count;
@@ -3758,7 +3758,7 @@ int nvt_sec_mp_parse_dt(struct nvt_ts_data *ts, const char *node_compatible)
 	}
 
 	if (!child) {
-		NVT_ERR("%s: do not find mp criteria for %s\n",
+		input_err(true, &ts->client->dev,"%s: do not find mp criteria for %s\n",
 			  __func__, node_compatible);
 		return -EINVAL;
 	}
@@ -3773,7 +3773,7 @@ int nvt_sec_mp_parse_dt(struct nvt_ts_data *ts, const char *node_compatible)
 	if (of_property_read_u32(np, "diff_test_frame", &ts->platdata->diff_test_frame))
 		return -EINVAL;
 
-	NVT_LOG("%s: parse mp criteria for %s\n", __func__, node_compatible);
+	input_info(true, &ts->client->dev,"%s: parse mp criteria for %s\n", __func__, node_compatible);
 
 	return 0;
 }
@@ -3784,27 +3784,27 @@ int nvt_ts_sec_fn_init(struct nvt_ts_data *ts)
 
 	ret = sec_cmd_init(&ts->sec, sec_cmds, ARRAY_SIZE(sec_cmds), SEC_CLASS_DEVT_TSP);
 	if (ret < 0) {
-		NVT_ERR("%s: failed to sec cmd init\n",
+		input_err(true, &ts->client->dev,"%s: failed to sec cmd init\n",
 			__func__);
 		return ret;
 	}
 
 	ret = sysfs_create_group(&ts->sec.fac_dev->kobj, &cmd_attr_group);
 	if (ret) {
-		NVT_ERR("%s: failed to create sysfs attributes\n",
+		input_err(true, &ts->client->dev,"%s: failed to create sysfs attributes\n",
 			__func__);
 			goto out;
 	}
 
 	ret = sysfs_create_link(&ts->sec.fac_dev->kobj, &ts->input_dev->dev.kobj, "input");
 	if (ret) {
-		NVT_ERR("%s: failed to creat sysfs link\n",
+		input_err(true, &ts->client->dev,"%s: failed to creat sysfs link\n",
 			__func__);
 		sysfs_remove_group(&ts->sec.fac_dev->kobj, &cmd_attr_group);
 		goto out;
 	}
 
-	NVT_LOG("%s\n", __func__);
+	input_info(true, &ts->client->dev,"%s\n", __func__);
 
 	return 0;
 

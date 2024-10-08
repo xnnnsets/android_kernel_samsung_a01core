@@ -1,7 +1,7 @@
 #!/bin/bash
 
-export CROSS_COMPILE=$(pwd)/PLATFORM/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/arm-linux-androidkernel-
-export CC=$(pwd)/PLATFORM/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/arm-linux-androidkernel-gcc
+export CROSS_COMPILE=$(pwd)/toolchain/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/arm-linux-androidkernel-
+export CC=$(pwd)/toolchain/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/arm-linux-androidkernel-gcc
 export CLANG_TRIPLE=arm-linux-androidkernel-gcc
 export ARCH=arm
 
